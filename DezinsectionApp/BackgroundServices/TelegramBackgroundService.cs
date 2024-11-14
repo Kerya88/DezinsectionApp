@@ -32,36 +32,6 @@ namespace DezinsectionApp.BackgroundServices
             _infoBot = new TelegramBotClient(_configuration["Token"]!);
 
             State = true;
-
-            var foundedEmployees = _ezhkhService.GetRegistredEmployees().Result;
-            var citys = _ezhkhService.GetCrmCity().Result;
-
-            if (foundedEmployees != null && citys != null)
-            {
-                _employeeStore = new(foundedEmployees.Length);
-                foundedEmployees.ToList().ForEach(x =>
-                {
-                    var successParse = long.TryParse(x.TelegramID, out var tgId);
-
-                    if (successParse)
-                    {
-                        _employeeStore.Add(tgId, new Employee
-                        {
-                            TelegramID = tgId.ToString(),
-                            Phone = x.Phone,
-                            FIO = x.FIO,
-                            UserActivityStateType = Enums.UserActivityStateType.NotSet
-                        });
-                    }
-                });
-
-                Citys = citys;
-            }
-            else
-            {
-                Console.WriteLine("Не удалось получить данные из сервиса");
-                throw new Exception("Не удалось получить данные из сервиса");
-            }
         }
 
         public async Task SendInfoMessage(string message)
@@ -69,35 +39,11 @@ namespace DezinsectionApp.BackgroundServices
             await _infoBot.SendMessage(_configuration["InfoChatId"]!, message);
         }
 
-        public async Task SendMessage(long chatId, string message)
+        public async Task SendMessage(long chatId, string message, IReplyMarkup? replyMarkup = default)
         {
             if (State)
             {
-                await _infoBot.SendMessage(chatId, message);
-            }
-            else
-            {
-                await _infoBot.SendMessage(chatId, "Бот деактивирован");
-            }
-        }
-
-        public async Task SendMessage(long chatId, string message, ReplyKeyboardMarkup replyKeyboardMarkup)
-        {
-            if (State)
-            {
-                await _infoBot.SendMessage(chatId, message, replyMarkup: replyKeyboardMarkup);
-            }
-            else
-            {
-                await _infoBot.SendMessage(chatId, "Бот деактивирован");
-            }
-        }
-
-        public async Task SendMessage(long chatId, string message, InlineKeyboardMarkup replyKeyboardMarkup)
-        {
-            if (State)
-            {
-                await _infoBot.SendMessage(chatId, message, replyMarkup: replyKeyboardMarkup);
+                await _infoBot.SendMessage(chatId, message, replyMarkup: replyMarkup);
             }
             else
             {
@@ -107,14 +53,55 @@ namespace DezinsectionApp.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await UpdateState(stoppingToken);
+
             _infoBot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cancellationToken: stoppingToken);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
+        private async Task UpdateState(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                var foundedEmployees = await _ezhkhService.GetRegistredEmployees();
+                var citys = await _ezhkhService.GetCrmCity();
+
+                if (foundedEmployees != null && citys != null)
+                {
+                    _employeeStore = new(foundedEmployees.Length);
+                    foundedEmployees.ToList().ForEach(x =>
+                    {
+                        var successParse = long.TryParse(x.TelegramID, out var tgId);
+
+                        if (successParse)
+                        {
+                            _employeeStore.Add(tgId, new Employee
+                            {
+                                TelegramID = tgId.ToString(),
+                                Phone = x.Phone,
+                                FIO = x.FIO,
+                                UserActivityStateType = Enums.UserActivityStateType.NotSet
+                            });
+                        }
+                    });
+
+                    Citys = citys;
+                }
+                else
+                {
+                    Console.WriteLine("Не удалось получить данные из сервиса");
+                    throw new Exception("Не удалось получить данные из сервиса");
+                }
+
+                // Ждем 10 минут перед следующим обновлением
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+            }
+        }
+
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            if (update.Type == UpdateType.Message && update.Message != null && update.Message.From != null)
+            if (update.Type == UpdateType.Message && update.Message != null && update.Message.From != null && update.Message.Chat.Type == ChatType.Private)
             {
                 var emloyeeFounded = _employeeStore.TryGetValue(update.Message.From.Id, out var emloyee);
 
