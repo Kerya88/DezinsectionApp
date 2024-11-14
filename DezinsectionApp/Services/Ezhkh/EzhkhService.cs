@@ -1,0 +1,118 @@
+﻿using GJIService;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace DezinsectionApp.Services.Ezhkh
+{
+    public class EzhkhService(IUrbanAppealService serviceClient) : IEzhkhService
+    {
+        private readonly IUrbanAppealService _serviceClient = serviceClient;
+
+        public async Task<int> GetResponsibleUserIdAsync()
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetActiveOperatorAsync(token);
+
+                var id = int.Parse(responce.ActiveOperator.Id);
+
+                return id;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
+        public async Task<BotUserProxy[]?> GetRegistredEmployees()
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetBotUserAsync(token);
+
+                responce.BotUserProxyes ??= [];
+
+                return responce.BotUserProxyes;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CrmCityProxy[]?> GetCrmCity()
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetCrmCityAsync(token);
+
+                responce.CrmCityProxyes ??= [];
+
+                return responce.CrmCityProxyes;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> RegisterNewEmployee(SESEmployerProxy employe)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.RegisterNewEmployerAsync(employe, token);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        //public static async Task<Employee[]?> GetEmployeesByCity(string city)
+        //{
+        //    try
+        //    {
+        //        var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+        //
+        //        var responce = await _serviceClient.GetActiveOperatorAsync(token);
+        //
+        //        var id = int.Parse(responce.ActiveOperator.Id);
+        //
+        //        return null;
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return null;
+        //    }
+        //}
+
+        private static string ComputeHash(string hashBase)
+        {
+            //переводим строку в байт-массим  
+            byte[] bytes = Encoding.ASCII.GetBytes(hashBase);
+
+            //вычисляем хеш-представление в байтах  
+            byte[] byteHash = MD5.HashData(bytes);
+
+            string hash = string.Empty;
+
+            //формируем одну цельную строку из массива  
+            foreach (byte b in byteHash)
+            {
+                hash += string.Format("{0:x2}", b);
+            }
+
+            return hash;
+        }
+    }
+}
