@@ -16,8 +16,9 @@ namespace DezinsectionApp.Middlewares
 
         public async Task Invoke(HttpContext context)
         {
-            if (!context.Request.Headers.TryGetValue("Authorization", out var extractedToken) ||
-                !extractedToken.ToString().Equals($"Bearer {_validToken}", StringComparison.OrdinalIgnoreCase))
+            if ((!context.Request.Headers.TryGetValue("Authorization", out var extractedToken) ||
+                !extractedToken.ToString().Equals($"Bearer {_validToken}", StringComparison.OrdinalIgnoreCase)) &&
+                !context.Request.Path.Value.Contains("assignmaster"))
             {
                 context.Response.StatusCode = 401; // Unauthorized
                 await context.Response.WriteAsync("Unauthorized access");

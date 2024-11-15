@@ -1,4 +1,5 @@
 ﻿using DezinsectionApp.Services.Ezhkh;
+using System.Text;
 
 namespace DezinsectionApp.Entities
 {
@@ -139,6 +140,48 @@ namespace DezinsectionApp.Entities
 
             return [amoProxy];
         }
+
+        public override string ToString()
+        {
+            var contact = _embedded?.contacts?.FirstOrDefault(x => x.custom_fields_values != null
+                    && x.custom_fields_values.Any(x => x.field_id == 983491 && x.values.Any(x => !string.IsNullOrEmpty(x.value.ToString()))));
+
+            var name = contact?.name ?? string.Empty;
+            var phone = contact?.custom_fields_values?.FirstOrDefault(x => x.field_id == 983491)?.values.FirstOrDefault()?.value ?? string.Empty;
+
+            var problem = string.Join(", ", custom_fields_values?.FirstOrDefault(x => x.field_id == 1077467)?.values.Select(x => x.value.ToString() ?? string.Empty));
+
+            var unixDate = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077571)!.values.Select(x => int.Parse(x.value.ToString())).FirstOrDefault();
+            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var dateTime = epoch.AddSeconds(unixDate.Value);
+            var localDateTime = dateTime.ToLocalTime();
+
+            var city = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077293)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var address = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077575)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var comment = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077577)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var sum = custom_fields_values?.FirstOrDefault(x => x.field_id == 1545483)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var roomsCount = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077517)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var area = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077519)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+
+            var sb = new StringBuilder();
+            sb.Append($"Имя клиента: {name}\n");
+            sb.Append($"Телефон: {phone}\n");
+            sb.Append($"Стартовая сумма: {sum}\n");
+            sb.Append($"Дата и время визита: {localDateTime:g}\n");
+            sb.Append($"Город: {city}\n");
+            sb.Append($"Адрес объекта: {address}\n");
+            sb.Append($"Проблема: {phone}\n");
+            sb.Append($"Кол-во комнат: {roomsCount}\n");
+            sb.Append($"Площадь: {area}\n");
+            sb.Append($"Комментарий: {comment}\n");
+
+            return sb.ToString();
+        }
     }
 
     public class Embedded
@@ -187,7 +230,9 @@ namespace DezinsectionApp.Entities
     public class CustomFieldsValue
     {
         public int field_id { get; set; }
+        public string? field_name { get; set; }
         public string? field_code { get; set; }
+        public string? field_type { get; set; }
         public required Value[] values { get; set; }
     }
 

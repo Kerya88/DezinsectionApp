@@ -33,5 +33,22 @@ namespace DezinsectionApp.Controllers.AmoCrm
                 return BadRequest("Неверный запрос");
             }
         }
+
+        [HttpPost("assignmaster")]
+        public async Task<IActionResult> AssignMaster()
+        {
+            try
+            {
+                var requestBody = await new StreamReader(Request.Body).ReadToEndAsync();
+
+                _ = Task.Run(async () => await _amoCrmLeadService.AssignMaster(requestBody));
+
+                return Ok("Успешно");
+            }
+            catch (Exception)
+            {
+                return BadRequest("Неверный запрос");
+            }
+        }
     }
 }
