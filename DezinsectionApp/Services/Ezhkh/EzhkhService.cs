@@ -62,6 +62,24 @@ namespace DezinsectionApp.Services.Ezhkh
             }
         }
 
+        public async Task<SESKuratorProxy?> GetKurator(string city, string leadDate)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetKuratorAsync(token, city, leadDate);
+
+                responce.SESKuratorProxy ??= new SESKuratorProxy();
+
+                return responce.SESKuratorProxy;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<bool> RegisterNewEmployee(SESEmployerProxy employe)
         {
             try
@@ -78,23 +96,39 @@ namespace DezinsectionApp.Services.Ezhkh
             }
         }
 
-        //public static async Task<Employee[]?> GetEmployeesByCity(string city)
-        //{
-        //    try
-        //    {
-        //        var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
-        //
-        //        var responce = await _serviceClient.GetActiveOperatorAsync(token);
-        //
-        //        var id = int.Parse(responce.ActiveOperator.Id);
-        //
-        //        return null;
-        //    }
-        //    catch (Exception)
-        //    {
-        //        return null;
-        //    }
-        //}
+        public async Task<bool> CreateDeal(DealProxy deal)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.CreateDealAsync(deal, token);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public async Task<DealProxy[]?> GetMyDeals(string employeeId, bool? isReassig = null)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetMyDealsAsync(token, employeeId, isReassig != null ? isReassig.Value ? "Да" : "Нет" : "");
+
+                responce.DealProxyes ??= [];
+
+                return responce.DealProxyes;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
 
         private static string ComputeHash(string hashBase)
         {

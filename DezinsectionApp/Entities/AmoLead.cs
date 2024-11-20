@@ -5,6 +5,7 @@ namespace DezinsectionApp.Entities
 {
     public class AmoLead
     {
+        public int? id { get; set; }
         public string? name { get; set; }
         public int? price { get; set; }
         public int? status_id { get; set; }
@@ -151,31 +152,67 @@ namespace DezinsectionApp.Entities
 
             var problem = string.Join(", ", custom_fields_values?.FirstOrDefault(x => x.field_id == 1077467)?.values.Select(x => x.value.ToString() ?? string.Empty));
 
-            var unixDate = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077571)!.values.Select(x => int.Parse(x.value.ToString())).FirstOrDefault();
-            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            var dateTime = epoch.AddSeconds(unixDate.Value);
-            var localDateTime = dateTime.ToLocalTime();
+            var dateField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077571);
+            var date = string.Empty;
+            if (dateField != null)
+            {
+                var unixDate = dateField.values.Select(x => int.Parse(x.value.ToString())).FirstOrDefault();
+                var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var dateTime = epoch.AddSeconds(unixDate);
+                var localDateTime = dateTime.ToLocalTime();
+                date = localDateTime.ToString("g");
+            }
 
-            var city = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077293)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var cityField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077293);
+            var city = string.Empty;
+            if (cityField != null)
+            {
+                city = cityField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
-            var address = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077575)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var addressField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077575);
+            var address = string.Empty;
+            if (addressField != null)
+            {
+                address = addressField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
-            var comment = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077577)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var commentField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077577);
+            var comment = string.Empty;
+            if (commentField != null)
+            {
+                comment = commentField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
-            var sum = custom_fields_values?.FirstOrDefault(x => x.field_id == 1545483)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var sumField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1545483);
+            var sum = string.Empty;
+            if (sumField != null)
+            {
+                sum = sumField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
-            var roomsCount = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077517)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var roomsCountField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077517);
+            var roomsCount = string.Empty;
+            if (roomsCountField != null)
+            {
+                roomsCount = roomsCountField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
-            var area = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077519)!.values.Select(x => x.value.ToString()).FirstOrDefault();
+            var areaField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077519);
+            var area = string.Empty;
+            if (areaField != null)
+            {
+                area = areaField.values.Select(x => x.value.ToString()).FirstOrDefault();
+            }
 
             var sb = new StringBuilder();
             sb.Append($"Имя клиента: {name}\n");
             sb.Append($"Телефон: {phone}\n");
             sb.Append($"Стартовая сумма: {sum}\n");
-            sb.Append($"Дата и время визита: {localDateTime:g}\n");
+            sb.Append($"Дата и время визита: {date}\n");
             sb.Append($"Город: {city}\n");
             sb.Append($"Адрес объекта: {address}\n");
-            sb.Append($"Проблема: {phone}\n");
+            sb.Append($"Проблема: {problem}\n");
             sb.Append($"Кол-во комнат: {roomsCount}\n");
             sb.Append($"Площадь: {area}\n");
             sb.Append($"Комментарий: {comment}\n");

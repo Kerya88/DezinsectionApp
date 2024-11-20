@@ -71,6 +71,18 @@ namespace GJIService
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetCrmCity", ReplyAction="http://tempuri.org/IUrbanAppealService/GetCrmCityResponse")]
         [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
         System.Threading.Tasks.Task<GJIService.GetCrmCityResponce> GetCrmCityAsync(string Token);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetKurator", ReplyAction="http://tempuri.org/IUrbanAppealService/GetKuratorResponse")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        System.Threading.Tasks.Task<GJIService.SESKuratorProxyResponce> GetKuratorAsync(string Token, string City, string Datetime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/CreateDeal", ReplyAction="http://tempuri.org/IUrbanAppealService/CreateDealResponse")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        System.Threading.Tasks.Task<GJIService.CreateDealProxyResponce> CreateDealAsync(GJIService.DealProxy DealProxy, string Token);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetMyDeals", ReplyAction="http://tempuri.org/IUrbanAppealService/GetMyDealsResponse")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig);
     }
     
     /// <remarks/>
@@ -245,53 +257,45 @@ namespace GJIService
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
-    public partial class CrmCityProxy
+    public partial class GetMyDealsResponce
     {
         
-        private string nameField;
+        private DealProxy[] dealProxyesField;
         
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
-        public string Name
-        {
-            get
-            {
-                return this.nameField;
-            }
-            set
-            {
-                this.nameField = value;
-            }
-        }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
-    public partial class GetCrmCityResponce
-    {
-        
-        private CrmCityProxy[] crmCityProxyesField;
+        private string responceTextField;
         
         private RequestResult requestResultField;
         
         /// <remarks/>
         [System.Xml.Serialization.XmlArrayAttribute(Order=0)]
-        public CrmCityProxy[] CrmCityProxyes
+        public DealProxy[] DealProxyes
         {
             get
             {
-                return this.crmCityProxyesField;
+                return this.dealProxyesField;
             }
             set
             {
-                this.crmCityProxyesField = value;
+                this.dealProxyesField = value;
             }
         }
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public string ResponceText
+        {
+            get
+            {
+                return this.responceTextField;
+            }
+            set
+            {
+                this.responceTextField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
         public RequestResult RequestResult
         {
             get
@@ -301,6 +305,142 @@ namespace GJIService
             set
             {
                 this.requestResultField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class DealProxy
+    {
+        
+        private string dealIdField;
+        
+        private string kuratorTelegramIDField;
+        
+        private string masterTelegramIDField;
+        
+        private string budgetField;
+        
+        private string dealDateTimeField;
+        
+        private string dealDetailsField;
+        
+        private string delayedField;
+        
+        private string masterDataField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string DealId
+        {
+            get
+            {
+                return this.dealIdField;
+            }
+            set
+            {
+                this.dealIdField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public string KuratorTelegramID
+        {
+            get
+            {
+                return this.kuratorTelegramIDField;
+            }
+            set
+            {
+                this.kuratorTelegramIDField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
+        public string MasterTelegramID
+        {
+            get
+            {
+                return this.masterTelegramIDField;
+            }
+            set
+            {
+                this.masterTelegramIDField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=3)]
+        public string Budget
+        {
+            get
+            {
+                return this.budgetField;
+            }
+            set
+            {
+                this.budgetField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=4)]
+        public string DealDateTime
+        {
+            get
+            {
+                return this.dealDateTimeField;
+            }
+            set
+            {
+                this.dealDateTimeField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=5)]
+        public string DealDetails
+        {
+            get
+            {
+                return this.dealDetailsField;
+            }
+            set
+            {
+                this.dealDetailsField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=6)]
+        public string Delayed
+        {
+            get
+            {
+                return this.delayedField;
+            }
+            set
+            {
+                this.delayedField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=7)]
+        public string MasterData
+        {
+            get
+            {
+                return this.masterDataField;
+            }
+            set
+            {
+                this.masterDataField = value;
             }
         }
     }
@@ -365,6 +505,262 @@ namespace GJIService
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class CreateDealProxyResponce
+    {
+        
+        private string responceTextField;
+        
+        private RequestResult requestResultField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string ResponceText
+        {
+            get
+            {
+                return this.responceTextField;
+            }
+            set
+            {
+                this.responceTextField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public RequestResult RequestResult
+        {
+            get
+            {
+                return this.requestResultField;
+            }
+            set
+            {
+                this.requestResultField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class SESMasterProxy
+    {
+        
+        private string telegramIDField;
+        
+        private string masterDataField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string TelegramID
+        {
+            get
+            {
+                return this.telegramIDField;
+            }
+            set
+            {
+                this.telegramIDField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public string MasterData
+        {
+            get
+            {
+                return this.masterDataField;
+            }
+            set
+            {
+                this.masterDataField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class SESKuratorProxy
+    {
+        
+        private string telegramIDField;
+        
+        private string phoneField;
+        
+        private string fIOField;
+        
+        private SESMasterProxy[] sESMasterProxyesField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string TelegramID
+        {
+            get
+            {
+                return this.telegramIDField;
+            }
+            set
+            {
+                this.telegramIDField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public string Phone
+        {
+            get
+            {
+                return this.phoneField;
+            }
+            set
+            {
+                this.phoneField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
+        public string FIO
+        {
+            get
+            {
+                return this.fIOField;
+            }
+            set
+            {
+                this.fIOField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(Order=3)]
+        public SESMasterProxy[] SESMasterProxyes
+        {
+            get
+            {
+                return this.sESMasterProxyesField;
+            }
+            set
+            {
+                this.sESMasterProxyesField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class SESKuratorProxyResponce
+    {
+        
+        private SESKuratorProxy sESKuratorProxyField;
+        
+        private RequestResult requestResultField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public SESKuratorProxy SESKuratorProxy
+        {
+            get
+            {
+                return this.sESKuratorProxyField;
+            }
+            set
+            {
+                this.sESKuratorProxyField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public RequestResult RequestResult
+        {
+            get
+            {
+                return this.requestResultField;
+            }
+            set
+            {
+                this.requestResultField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class CrmCityProxy
+    {
+        
+        private string nameField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string Name
+        {
+            get
+            {
+                return this.nameField;
+            }
+            set
+            {
+                this.nameField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class GetCrmCityResponce
+    {
+        
+        private CrmCityProxy[] crmCityProxyesField;
+        
+        private RequestResult requestResultField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(Order=0)]
+        public CrmCityProxy[] CrmCityProxyes
+        {
+            get
+            {
+                return this.crmCityProxyesField;
+            }
+            set
+            {
+                this.crmCityProxyesField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public RequestResult RequestResult
+        {
+            get
+            {
+                return this.requestResultField;
+            }
+            set
+            {
+                this.requestResultField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
     public partial class BotUserProxy
     {
         
@@ -377,6 +773,8 @@ namespace GJIService
         private string crmNameField;
         
         private string codeField;
+        
+        private string userTypeField;
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=0)]
@@ -445,6 +843,20 @@ namespace GJIService
             set
             {
                 this.codeField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=5)]
+        public string UserType
+        {
+            get
+            {
+                return this.userTypeField;
+            }
+            set
+            {
+                this.userTypeField = value;
             }
         }
     }
@@ -2495,6 +2907,21 @@ namespace GJIService
         public System.Threading.Tasks.Task<GJIService.GetCrmCityResponce> GetCrmCityAsync(string Token)
         {
             return base.Channel.GetCrmCityAsync(Token);
+        }
+        
+        public System.Threading.Tasks.Task<GJIService.SESKuratorProxyResponce> GetKuratorAsync(string Token, string City, string Datetime)
+        {
+            return base.Channel.GetKuratorAsync(Token, City, Datetime);
+        }
+        
+        public System.Threading.Tasks.Task<GJIService.CreateDealProxyResponce> CreateDealAsync(GJIService.DealProxy DealProxy, string Token)
+        {
+            return base.Channel.CreateDealAsync(DealProxy, Token);
+        }
+        
+        public System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig)
+        {
+            return base.Channel.GetMyDealsAsync(Token, TelegramId, IsReassig);
         }
         
         public virtual System.Threading.Tasks.Task OpenAsync()

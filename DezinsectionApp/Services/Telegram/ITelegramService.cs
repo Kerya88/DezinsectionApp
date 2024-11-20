@@ -7,6 +7,8 @@ namespace DezinsectionApp.Services.Telegram
 {
     public interface ITelegramService
     {
-        public Task ProcessMessage(TelegramBackgroundService service, Update update, Employee emloyee);
+        public Task ProcessMessage(Update update, Employee emloyee);
+        public Task NotifyCurator(AmoLead lead);
+        public Task NotifyMaster(NotifyProxy notifyProxy);
     }
 }

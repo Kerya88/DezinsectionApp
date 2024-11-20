@@ -13,6 +13,9 @@ namespace DezinsectionApp.Enums
         [Display(Name = "Куратор")]
         Curator = 15,
 
+        [Display(Name = "Внешний куратор")]
+        ExternalCurator = 20,
+
         [Display(Name = "Мастер")]
         Master = 30,
 

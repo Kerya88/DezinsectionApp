@@ -14,19 +14,21 @@ namespace DezinsectionApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-
-            builder.Services.AddTransient<IAmoCrmLeadService, AmoCrmLeadService>();
-            builder.Services.AddTransient<ITelegramService, TelegramService>();
-            builder.Services.AddTransient<IEzhkhService, EzhkhService>();
             builder.Services.AddTransient<IUrbanAppealService, UrbanAppealServiceClient>(provider =>
             {
                 return new(UrbanAppealServiceClient.EndpointConfiguration.BasicHttpBinding_IUrbanAppealService);
             });
-            builder.Services.AddSingleton<ITelegramBackgroundService, TelegramBackgroundService>();
+            builder.Services.AddSingleton<IEzhkhService, EzhkhService>();
+            builder.Services.AddSingleton<StorageBackgroundService>();
+            builder.Services.AddHostedService<StorageBackgroundService>();
+            builder.Services.AddSingleton<TelegramBackgroundService>();
             builder.Services.AddHostedService<TelegramBackgroundService>();
+            builder.Services.AddTransient<ITelegramService, TelegramService>();
+            builder.Services.AddTransient<IAmoCrmLeadService, AmoCrmLeadService>();
+
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
             ServiceLocator.Init(app.Services);

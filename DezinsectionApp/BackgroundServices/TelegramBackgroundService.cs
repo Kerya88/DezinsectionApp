@@ -1,7 +1,5 @@
 ﻿using DezinsectionApp.Entities;
-using DezinsectionApp.Services.Ezhkh;
 using DezinsectionApp.Services.Telegram;
-using GJIService;
 using System.ServiceModel.Channels;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -11,27 +9,19 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace DezinsectionApp.BackgroundServices
 {
-    public class TelegramBackgroundService : BackgroundService, ITelegramBackgroundService
+    public class TelegramBackgroundService : BackgroundService
     {
         private readonly IConfiguration _configuration;
-        private readonly ITelegramService _telegramService;
-        private readonly IEzhkhService _ezhkhService;
+        private readonly IServiceProvider _serviceProvider;
         private readonly TelegramBotClient _infoBot;
+        private readonly StorageBackgroundService _storageBackgroundService;
 
-        private Dictionary<long, Employee> _employeeStore;
-
-        public bool State { get; set; }
-        public CrmCityProxy[] Citys { get; set; }
-
-        public TelegramBackgroundService(IConfiguration configuration, ITelegramService telegramService, IEzhkhService ezhkhService)
+        public TelegramBackgroundService(IConfiguration configuration, IServiceProvider serviceProvider, StorageBackgroundService storageBackgroundService)
         {
             _configuration = configuration;
-            _telegramService = telegramService;
-            _ezhkhService = ezhkhService;
-
+            _serviceProvider = serviceProvider;
             _infoBot = new TelegramBotClient(_configuration["Token"]!);
-
-            State = true;
+            _storageBackgroundService = storageBackgroundService;
         }
 
         public async Task SendInfoMessage(string message)
@@ -41,99 +31,108 @@ namespace DezinsectionApp.BackgroundServices
 
         public async Task SendMessage(long chatId, string message, IReplyMarkup? replyMarkup = default)
         {
-            if (State)
+            try
             {
-                await _infoBot.SendMessage(chatId, message, replyMarkup: replyMarkup);
+                if (_storageBackgroundService.State)
+                {
+                    await _infoBot.SendMessage(chatId, message, replyMarkup: replyMarkup);
+                }
+                else
+                {
+                    await _infoBot.SendMessage(chatId, "Бот деактивирован");
+                }
             }
-            else
+            catch (Exception e)
             {
-                await _infoBot.SendMessage(chatId, "Бот деактивирован");
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        public async Task SendMessage(string chatId, string message, IReplyMarkup? replyMarkup = default)
+        {
+            try
+            {
+                if (_storageBackgroundService.State)
+                {
+                    await _infoBot.SendMessage(chatId, message, replyMarkup: replyMarkup);
+                }
+                else
+                {
+                    await _infoBot.SendMessage(chatId, "Бот деактивирован");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
             }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await UpdateState(stoppingToken);
-
             _infoBot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cancellationToken: stoppingToken);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async Task UpdateState(CancellationToken stoppingToken)
+        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            using (var scope = _serviceProvider.CreateScope())
             {
-                var foundedEmployees = await _ezhkhService.GetRegistredEmployees();
-                var citys = await _ezhkhService.GetCrmCity();
+                var telegramService = scope.ServiceProvider.GetRequiredService<ITelegramService>();
 
-                if (foundedEmployees != null && citys != null)
+                Employee? employee = null;
+                long employeeId = 0;
+                ChatType? chatType = null;
+
+                if (update.Type == UpdateType.Message && update.Message != null && update.Message.From != null && update.Message.Chat.Type == ChatType.Private)
                 {
-                    _employeeStore = new(foundedEmployees.Length);
-                    foundedEmployees.ToList().ForEach(x =>
+                    _storageBackgroundService.EmployeeStore.TryGetValue(update.Message.From.Id, out employee);
+                    employeeId = update.Message.From.Id;
+                    chatType = update.Message.Chat.Type;
+
+                    if (update.Message.Text == "8fce83fc-e31b-4f3c-bada-734113326662")
                     {
-                        var successParse = long.TryParse(x.TelegramID, out var tgId);
+                        _storageBackgroundService.State = true;
+                        await _infoBot.SendMessage(update.Message.Chat.Id, "Бот активирован");
+                        return;
+                    }
 
-                        if (successParse)
+                    if (update.Message.Text == "e5287157-6549-4da7-97ab-6ba5e12c76db")
+                    {
+                        _storageBackgroundService.State = false;
+                        await _infoBot.SendMessage(update.Message.Chat.Id, "Бот деактивирован");
+                        return;
+                    }
+                }
+                else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null && update.CallbackQuery.Message != null && update.CallbackQuery.Message.Chat.Type == ChatType.Private)
+                {
+                    _storageBackgroundService.EmployeeStore.TryGetValue(update.CallbackQuery.From.Id, out employee);
+                    employeeId = update.CallbackQuery.From.Id;
+                    chatType = update.CallbackQuery.Message.Chat.Type;
+                }
+
+                if (_storageBackgroundService.State)
+                {
+                    if (chatType != null && chatType == ChatType.Private)
+                    {
+                        if (employee == null)
                         {
-                            _employeeStore.Add(tgId, new Employee
+                            employee = new Employee
                             {
-                                TelegramID = tgId.ToString(),
-                                Phone = x.Phone,
-                                FIO = x.FIO,
-                                UserActivityStateType = Enums.UserActivityStateType.NotSet
-                            });
-                        }
-                    });
+                                UserActivityStateType = Enums.UserActivityStateType.NotSet,
+                                City = string.Empty
+                            };
 
-                    Citys = citys;
+                            _storageBackgroundService.EmployeeStore.Add(employeeId, employee);
+                        }
+
+                        await telegramService.ProcessMessage(update, employee);
+                    }
                 }
                 else
                 {
-                    Console.WriteLine("Не удалось получить данные из сервиса");
-                    throw new Exception("Не удалось получить данные из сервиса");
+                    await _infoBot.SendMessage(employeeId, "Бот деактивирован");
                 }
-
-                // Ждем 10 минут перед следующим обновлением
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
-            }
-        }
-
-        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-        {
-            if (update.Type == UpdateType.Message && update.Message != null && update.Message.From != null && update.Message.Chat.Type == ChatType.Private)
-            {
-                var emloyeeFounded = _employeeStore.TryGetValue(update.Message.From.Id, out var emloyee);
-
-                if (!emloyeeFounded)
-                {
-                    emloyee = new Employee
-                    {
-                        UserActivityStateType = Enums.UserActivityStateType.NotSet,
-                        City = string.Empty
-                    };
-
-                    _employeeStore.Add(update.Message.From.Id, emloyee);
-                }
-
-                await _telegramService.ProcessMessage(this, update, emloyee!);
-            }
-            else if (update.Type == UpdateType.CallbackQuery)
-            {
-                var emloyeeFounded = _employeeStore.TryGetValue(update.CallbackQuery.From.Id, out var emloyee);
-
-                if (!emloyeeFounded)
-                {
-                    emloyee = new Employee
-                    {
-                        UserActivityStateType = Enums.UserActivityStateType.NotSet,
-                        City = string.Empty
-                    };
-
-                    _employeeStore.Add(update.Message.From.Id, emloyee);
-                }
-
-                await _telegramService.ProcessMessage(this, update, emloyee!);
             }
         }
 

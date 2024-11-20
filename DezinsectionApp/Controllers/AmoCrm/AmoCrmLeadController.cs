@@ -5,17 +5,9 @@ namespace DezinsectionApp.Controllers.AmoCrm
 {
     [ApiController]
     [Route("creatiumapi")]
-    public class AmoCrmLeadController : ControllerBase
+    public class AmoCrmLeadController(IAmoCrmLeadService amoCrmLeadService) : ControllerBase
     {
-        private readonly IAmoCrmLeadService _amoCrmLeadService;
-
-        private readonly ILogger<AmoCrmLeadController> _logger;
-
-        public AmoCrmLeadController(IAmoCrmLeadService amoCrmLeadService, ILogger<AmoCrmLeadController> logger)
-        {
-            _amoCrmLeadService = amoCrmLeadService;
-            _logger = logger;
-        }
+        private readonly IAmoCrmLeadService _amoCrmLeadService = amoCrmLeadService;
 
         [HttpPost("post")]
         public async Task<IActionResult> Post()
@@ -44,6 +36,31 @@ namespace DezinsectionApp.Controllers.AmoCrm
                 _ = Task.Run(async () => await _amoCrmLeadService.AssignMaster(requestBody));
 
                 return Ok("Успешно");
+            }
+            catch (Exception)
+            {
+                return BadRequest("Неверный запрос");
+            }
+        }
+
+        [HttpPost("notify")]
+        public async Task<IActionResult> NotifyMaster()
+        {
+            try
+            {
+                var requestBody = await new StreamReader(Request.Body).ReadToEndAsync();
+
+                var success = await _amoCrmLeadService.NotifyMaster(requestBody);
+
+                if (success)
+                {
+                    return Ok("Успешно");
+                }
+                else
+                {
+                    return BadRequest("Не удалось уведомить мастера");
+                }
+                
             }
             catch (Exception)
             {
