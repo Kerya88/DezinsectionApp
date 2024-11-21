@@ -5,12 +5,7 @@ using DezinsectionApp.Extentions;
 using DezinsectionApp.Services.AmoCrm.Lead;
 using DezinsectionApp.Services.Ezhkh;
 using GJIService;
-using System.ServiceModel.Channels;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Text.Unicode;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -19,22 +14,12 @@ namespace DezinsectionApp.Services.Telegram
 {
     public class TelegramService(IEzhkhService ezhkhService, StorageBackgroundService storageBackgroundService, TelegramBackgroundService telegramBackgroundService) : ITelegramService
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new()
-        {
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
-        };
-
-        private readonly IEzhkhService _ezhkhService = ezhkhService;
-        private readonly StorageBackgroundService _storageBackgroundService = storageBackgroundService;
-        private readonly TelegramBackgroundService _telegramBackgroundService = telegramBackgroundService;
-        private readonly Regex _fioRegex = new(@"^[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}$");
-        private readonly Regex _phoneRegex = new(@"^(\+7|8)9\d{9}$");
+        private static readonly Regex FioRegex = new(@"^[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}$");
+        private static readonly Regex PhoneRegex = new(@"^(\+7|8)9\d{9}$");
 
         public async Task ProcessMessage(Update update, Employee employee)
         {
-            if (update.Type == UpdateType.Message && update.Message.Type == MessageType.Text && !string.IsNullOrEmpty(update.Message.Text))
+            if (update is { Type: UpdateType.Message, Message.Type: MessageType.Text } && !string.IsNullOrEmpty(update.Message.Text))
             {
                 var message = update.Message;
 
@@ -50,7 +35,7 @@ namespace DezinsectionApp.Services.Telegram
                             {
                                 var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
 
-                                await _telegramBackgroundService.SendMessage(message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
+                                await telegramBackgroundService.SendMessage(message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
                             }
 
                             break;
@@ -59,17 +44,17 @@ namespace DezinsectionApp.Services.Telegram
                         {
                             if (string.IsNullOrEmpty(employee.TelegramID))
                             {
-                                await _telegramBackgroundService.SendMessage(message.Chat.Id, "Введите Ваше ФИО, каждое слово с большой буквы");
+                                await telegramBackgroundService.SendMessage(message.Chat.Id, "Введите Ваше ФИО, каждое слово с большой буквы");
 
                                 employee.UserActivityStateType = UserActivityStateType.FIO;
                             }
                             else
                             {
-                                await _telegramBackgroundService.SendMessage(message.Chat.Id, "Вы уже зарегистрированы");
+                                await telegramBackgroundService.SendMessage(message.Chat.Id, "Вы уже зарегистрированы");
 
                                 var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
 
-                                await _telegramBackgroundService.SendMessage(message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
+                                await telegramBackgroundService.SendMessage(message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
                             }
 
                             break;
@@ -82,7 +67,7 @@ namespace DezinsectionApp.Services.Telegram
                             }
                             else
                             {
-                                await _telegramBackgroundService.SendMessage(message.Chat.Id, "Вы получили отчет");
+                                await telegramBackgroundService.SendMessage(message.Chat.Id, "Вы получили отчет");
                             }
                             break;
                         }
@@ -98,6 +83,26 @@ namespace DezinsectionApp.Services.Telegram
                             }
                             break;
                         }
+                    case "Проверить свой статус":
+                        {
+                            if (string.IsNullOrEmpty(employee.TelegramID))
+                            {
+                                await SendRegistrationInfo(message.Chat.Id);
+                            }
+                            else
+                            {
+                                if (employee.EmployeeType != EmployeeType.NotSet)
+                                {
+                                    var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
+                                    await telegramBackgroundService.SendMessage(message.Chat.Id, $"Теперь вам доступны действия сотрудника типа \"{employee.EmployeeType.GetDisplayName()}\"", replyKeyboardMarkup);
+                                }
+                                else
+                                {
+                                    await telegramBackgroundService.SendMessage(message.Chat.Id, "Дождитесь, пока одобрят запрошенный тип сотрудника");
+                                }
+                            }
+                            break;
+                        }
                     default:
                         {
                             switch (employee.UserActivityStateType)
@@ -106,15 +111,15 @@ namespace DezinsectionApp.Services.Telegram
                                     {
                                         var fio = message.Text.Trim();
 
-                                        if (_fioRegex.IsMatch(fio))
+                                        if (FioRegex.IsMatch(fio))
                                         {
                                             employee.FIO = fio;
                                             employee.UserActivityStateType = UserActivityStateType.Phone;
-                                            await _telegramBackgroundService.SendMessage(message.Chat.Id, "Введите Ваше номер телефона в формате +79123456789");
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Введите Ваше номер телефона в формате +79123456789");
                                         }
                                         else
                                         {
-                                            await _telegramBackgroundService.SendMessage(message.Chat.Id, "Введенное ФИО не соответствует формату");
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Введенное ФИО не соответствует формату");
                                         }
 
                                         break;
@@ -123,7 +128,7 @@ namespace DezinsectionApp.Services.Telegram
                                     {
                                         var phone = message.Text.Trim();
 
-                                        if (_phoneRegex.IsMatch(phone))
+                                        if (PhoneRegex.IsMatch(phone))
                                         {
                                             employee.Phone = phone;
                                             employee.UserActivityStateType = UserActivityStateType.Type;
@@ -137,11 +142,11 @@ namespace DezinsectionApp.Services.Telegram
                                                 }
                                             );
 
-                                            await _telegramBackgroundService.SendMessage(message.Chat.Id, "Выберите тип сотрудника", replyKeyboardMarkup);
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Выберите тип сотрудника", replyKeyboardMarkup);
                                         }
                                         else
                                         {
-                                            await _telegramBackgroundService.SendMessage(message.Chat.Id, "Введенный номер телефона не соответствует формату");
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Введенный номер телефона не соответствует формату");
                                         }
 
                                         break;
@@ -155,7 +160,7 @@ namespace DezinsectionApp.Services.Telegram
                                         else
                                         {
                                             var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
-                                            await _telegramBackgroundService.SendMessage(message.Chat.Id, "Вы не выбрали команду", replyKeyboardMarkup);
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Вы не выбрали команду", replyKeyboardMarkup);
                                         }
                                         break;
                                     }
@@ -165,7 +170,7 @@ namespace DezinsectionApp.Services.Telegram
                         }
                 }
             }
-            else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null && update.CallbackQuery.Data != null && update.CallbackQuery.Message != null)
+            else if (update is { Type: UpdateType.CallbackQuery, CallbackQuery: { Data: not null, Message: not null } })
             {
                 switch (update.CallbackQuery.Data.Split("%")[0])
                 {
@@ -174,12 +179,12 @@ namespace DezinsectionApp.Services.Telegram
                             var city = update.CallbackQuery.Data.Split("%")[2];
                             var date = update.CallbackQuery.Data.Split("%")[3];
 
-                            var curatorAndMasters = await _ezhkhService.GetKurator(city, date);
+                            var curatorAndMasters = await ezhkhService.GetKurator(city, date);
 
                             if (curatorAndMasters == null)
                             {
-                                await _telegramBackgroundService.SendInfoMessage($"Сервис недоступен, не удалось назначить мастера на заявку id = \n{update.CallbackQuery.Data.Split("%")[1]}");
-                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                await telegramBackgroundService.SendInfoMessage($"Сервис недоступен, не удалось назначить мастера на заявку id = \n{update.CallbackQuery.Data.Split("%")[1]}");
+                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
                                 break;
                             }
 
@@ -193,17 +198,17 @@ namespace DezinsectionApp.Services.Telegram
 
                             employee.UserActivityStateType = UserActivityStateType.AssignMaster;
 
-                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Доступные мастера", new InlineKeyboardMarkup(buttons));
+                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Доступные мастера", new InlineKeyboardMarkup(buttons));
 
                             break;
                         }
                     case "По которым назначен мастер":
                         {
-                            var deals = await _ezhkhService.GetMyDeals(employee.TelegramID, true);
+                            var deals = await ezhkhService.GetMyDeals(employee.TelegramID, true);
 
                             if (deals == null)
                             {
-                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
                                 break;
                             }
 
@@ -220,23 +225,23 @@ namespace DezinsectionApp.Services.Telegram
                                         }
                                     );
 
-                                    await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Мастер: {deal.MasterData}\n{deal.DealDetails}", replyKeyboardMarkup);
+                                    await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Мастер: {deal.MasterData}\n{deal.DealDetails}", replyKeyboardMarkup);
                                 }
                             }
                             else
                             {
-                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "У вас нет сделок");
+                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "У вас нет сделок");
                             }
 
                             break;
                         }
                     case "По которым НЕ назначен мастер":
                         {
-                            var deals = await _ezhkhService.GetMyDeals(employee.TelegramID, false);
+                            var deals = await ezhkhService.GetMyDeals(employee.TelegramID, false);
 
                             if (deals == null)
                             {
-                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
                                 break;
                             }
 
@@ -253,12 +258,12 @@ namespace DezinsectionApp.Services.Telegram
                                         }
                                     );
 
-                                    await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, deal.DealDetails, replyKeyboardMarkup);
+                                    await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, deal.DealDetails, replyKeyboardMarkup);
                                 }
                             }
                             else
                             {
-                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "По всем сделкам мастер назначен");
+                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "По всем сделкам мастер назначен");
                             }
 
                             break;
@@ -274,7 +279,7 @@ namespace DezinsectionApp.Services.Telegram
                                             employee.EmployeeType = result;
                                             employee.UserActivityStateType = UserActivityStateType.City;
 
-                                            var citys = _storageBackgroundService.Citys;
+                                            var citys = storageBackgroundService.Citys;
                                             var rowsCount = citys.Length % 2 == 0 ? citys.Length / 2 + 1 : citys.Length / 2 + 2;
 
                                             var keyboardButtons = new InlineKeyboardButton[rowsCount][];
@@ -301,12 +306,11 @@ namespace DezinsectionApp.Services.Telegram
                                             var replyKeyboardMarkup = new InlineKeyboardMarkup(keyboardButtons);
                                             //replyKeyboardMarkup.ResizeKeyboard = true;
 
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
-                                            break;
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
                                         }
                                         else
                                         {
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введенный тип сотрудника не существует");
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введенный тип сотрудника не существует");
                                         }
 
                                         break;
@@ -317,9 +321,9 @@ namespace DezinsectionApp.Services.Telegram
                                         {
                                             if (string.IsNullOrEmpty(employee.City))
                                             {
-                                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Необходимо выбрать хотя бы один город");
+                                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Необходимо выбрать хотя бы один город");
 
-                                                var citys = _storageBackgroundService.Citys;
+                                                var citys = storageBackgroundService.Citys;
                                                 var rowsCount = citys.Length % 2 == 0 ? citys.Length / 2 + 1 : citys.Length / 2 + 2;
 
                                                 var keyboardButtons = new InlineKeyboardButton[rowsCount][];
@@ -345,12 +349,12 @@ namespace DezinsectionApp.Services.Telegram
 
                                                 var replyKeyboardMarkup = new InlineKeyboardMarkup(keyboardButtons);
 
-                                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
+                                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
 
                                                 break;
                                             }
 
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Вы выбрали следующие города: {employee.City}");
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Вы выбрали следующие города: {employee.City}");
 
                                             employee.TelegramID = update.CallbackQuery.From.Id.ToString();
 
@@ -363,23 +367,27 @@ namespace DezinsectionApp.Services.Telegram
                                                 EmplType = ((int)employee.EmployeeType).ToString()
                                             };
 
-                                            var registrSuccess = await _ezhkhService.RegisterNewEmployee(ezhkhEmployee);
+                                            employee.EmployeeType = EmployeeType.NotSet;
+
+                                            var registrSuccess = await ezhkhService.RegisterNewEmployee(ezhkhEmployee);
 
                                             if (registrSuccess)
                                             {
                                                 employee.UserActivityStateType = UserActivityStateType.NotSet;
 
-                                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Вы успешно зарегистрировались");
+                                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Вы успешно зарегистрировались");
 
                                                 var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
+                                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "После проверки запрошенного вами типа сотрудника вам станет доступно меню внизу экрана", replyKeyboardMarkup);
 
-                                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
+                                                
+                                                //await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Здравствуйте, {employee.FIO}", replyKeyboardMarkup);
                                             }
                                             else
                                             {
                                                 employee.Clear();
 
-                                                await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "При регистрации произошла ошибка, попробуйте позже");
+                                                await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "При регистрации произошла ошибка, попробуйте позже");
                                             }
                                         }
                                         else
@@ -405,7 +413,7 @@ namespace DezinsectionApp.Services.Telegram
                                                 }
                                             }
 
-                                            var citys = _storageBackgroundService.Citys.Select(x => x.Name).Select(x =>
+                                            var citys = storageBackgroundService.Citys.Select(x => x.Name).Select(x =>
                                             {
                                                 if (splitCitys.Contains(x))
                                                 {
@@ -441,7 +449,7 @@ namespace DezinsectionApp.Services.Telegram
 
                                             var replyKeyboardMarkup = new InlineKeyboardMarkup(keyboardButtons);
 
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите города, для окончания выбора нажмите кнопку \"Завершить\"", replyKeyboardMarkup);
                                         }
 
                                         break;
@@ -450,19 +458,19 @@ namespace DezinsectionApp.Services.Telegram
                                     {
                                         var masterTgId = update.CallbackQuery.Data.Split("%")[3];
                                         var leadId = update.CallbackQuery.Data.Split("%")[0];
-                                        var master = _storageBackgroundService.EmployeeStore[long.Parse(masterTgId)];
+                                        var master = StorageBackgroundService.EmployeeStore[long.Parse(masterTgId)];
 
-                                        var leads = await _ezhkhService.GetMyDeals(update.CallbackQuery.Message.Chat.Id.ToString());
+                                        var leads = await ezhkhService.GetMyDeals(update.CallbackQuery.Message.Chat.Id.ToString());
 
                                         if (leads == null)
                                         {
-                                            await _telegramBackgroundService.SendInfoMessage($"Сервис недоступен, не удалось назначить мастера на заявку с id = {leadId}");
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                            await telegramBackgroundService.SendInfoMessage($"Сервис недоступен, не удалось назначить мастера на заявку с id = {leadId}");
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
                                             employee.UserActivityStateType = UserActivityStateType.NotSet;
                                             break;
                                         }
 
-                                        var lead = leads.ToList().Where(x => x.DealId == leadId).FirstOrDefault();
+                                        var lead = leads.ToList().FirstOrDefault(x => x.DealId == leadId);
 
                                         employee.UserActivityStateType = UserActivityStateType.NotSet;
 
@@ -470,12 +478,12 @@ namespace DezinsectionApp.Services.Telegram
 
                                         if (!success)
                                         {
-                                            await _telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера или смена статуса!\n\n{lead}");
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Не удалось назначить мастера");
+                                            await telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера или смена статуса!\n\n{lead}");
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Не удалось назначить мастера");
                                         }
                                         else
                                         {
-                                            await _telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Назначен мастер {master.FIO}");
+                                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Назначен мастер {master.FIO}");
                                         }
 
                                         break;
@@ -500,20 +508,13 @@ namespace DezinsectionApp.Services.Telegram
             var date = string.Empty;
             if (dateField != null)
             {
-                var unixDate = dateField.values.Select(x => int.Parse(x.value.ToString())).FirstOrDefault();
+                var unixDate = dateField.values.Select(x => int.Parse(x.value.ToString()!)).FirstOrDefault();
                 var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                 var dateTime = epoch.AddSeconds(unixDate);
                 var localDateTime = dateTime.ToLocalTime();
                 date = localDateTime.ToString("g");
             }
-
-            var commentField = lead!.custom_fields_values?.FirstOrDefault(x => x.field_id == 1077577);
-            var comment = string.Empty;
-            if (commentField != null)
-            {
-                comment = commentField.values.Select(x => x.value.ToString()).FirstOrDefault();
-            }
-
+            
             var sumField = lead!.custom_fields_values?.FirstOrDefault(x => x.field_id == 1545483);
             var sum = string.Empty;
             if (sumField != null)
@@ -523,19 +524,17 @@ namespace DezinsectionApp.Services.Telegram
 
             if (string.IsNullOrEmpty(city) && string.IsNullOrEmpty(date))
             {
-                await _telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера на заявку по причине отсутствия города или даты обработки\n{lead}");
+                await telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера на заявку по причине отсутствия города или даты обработки\n{lead}");
                 return;
             }
 
-            var curatorAndMasters = await _ezhkhService.GetKurator(city, date);
+            var curatorAndMasters = await ezhkhService.GetKurator(city!, date);
 
             if (curatorAndMasters == null)
             {
-                await _telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера на заявку\n{lead}");
+                await telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера на заявку\n{lead}");
                 return;
             }
-
-            var leadJson = JsonSerializer.Serialize(lead, _jsonOptions);
 
             var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
             {
@@ -544,7 +543,7 @@ namespace DezinsectionApp.Services.Telegram
                 //[InlineKeyboardButton.WithCallbackData("Автоназначение", lead.ToString())]
             });
 
-            await _telegramBackgroundService.SendMessage(long.Parse(curatorAndMasters.TelegramID), $"Новая Заявка!\n\n{lead}", replyKeyboardMarkup);
+            await telegramBackgroundService.SendMessage(long.Parse(curatorAndMasters.TelegramID), $"Новая Заявка!\n\n{lead}", replyKeyboardMarkup);
 
             var dealProxy = new DealProxy
             {
@@ -559,32 +558,32 @@ namespace DezinsectionApp.Services.Telegram
 
             if (!success)
             {
-                await _telegramBackgroundService.SendInfoMessage($"Не удалось создать первоначальную заявку!\n\n{lead}");
+                await telegramBackgroundService.SendInfoMessage($"Не удалось создать первоначальную заявку!\n\n{lead}");
             }
         }
 
-        public async Task<bool> AssignMaster(DealProxy deal, Employee? master = null)
+        private async Task<bool> AssignMaster(DealProxy deal, Employee? master = null)
         {
             if (master != null)
             {
-                var amoService = ServiceLocator.Instance?.GetRequiredService<IAmoCrmLeadService>();
+                var amoService = ServiceLocator.Instance.GetRequiredService<IAmoCrmLeadService>();
 
                 deal.MasterTelegramID = master.TelegramID;
 
-                var ezhkhResult = await _ezhkhService.CreateDeal(deal);
-                var amoResult = await amoService.AssignOrReplaceMaster(deal.DealId, master.CrmName);
+                var ezhkhResult = await ezhkhService.CreateDeal(deal);
+                var amoResult = await amoService!.AssignOrReplaceMaster(deal.DealId, master.CrmName);
 
                 return ezhkhResult && amoResult;
             }
             else
             {
-                return await _ezhkhService.CreateDeal(deal);
+                return await ezhkhService.CreateDeal(deal);
             }
         }
 
         public async Task NotifyMaster(NotifyProxy notifyProxy)
         {
-            await _telegramBackgroundService.SendMessage(long.Parse(notifyProxy.masterId), $"Новая Заявка!\n\n{notifyProxy.lead}");
+            await telegramBackgroundService.SendMessage(long.Parse(notifyProxy.masterId), $"Новая Заявка!\n\n{notifyProxy.lead}");
         }
 
         private async Task ShowMyLeads(Employee employee)
@@ -595,12 +594,12 @@ namespace DezinsectionApp.Services.Telegram
                     {
                         var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
                             {
-                                                    ["По которым назначен мастер"],
-                                                    ["По которым НЕ назначен мастер"]
+                                ["По которым назначен мастер"],
+                                ["По которым НЕ назначен мастер"]
                             }
                         );
 
-                        await _telegramBackgroundService.SendMessage(employee.TelegramID, "Какие сделки вас интересуют?", replyKeyboardMarkup);
+                        await telegramBackgroundService.SendMessage(employee.TelegramID, "Какие сделки вас интересуют?", replyKeyboardMarkup);
 
                         break;
                     }
@@ -610,11 +609,11 @@ namespace DezinsectionApp.Services.Telegram
                     }
                 case EmployeeType.Master:
                     {
-                        var deals = await _ezhkhService.GetMyDeals(employee.TelegramID);
+                        var deals = await ezhkhService.GetMyDeals(employee.TelegramID);
 
                         if (deals == null)
                         {
-                            await _telegramBackgroundService.SendMessage(employee.TelegramID, "Сервис недоступен");
+                            await telegramBackgroundService.SendMessage(employee.TelegramID, "Сервис недоступен");
                             break;
                         }
 
@@ -624,12 +623,12 @@ namespace DezinsectionApp.Services.Telegram
                             {
                                 var stringDeal = string.Join("\n", $"Сумма: {deal.Budget}", $"Дата и время визита: {deal.DealDateTime}", $"Комментарий: {deal.DealDetails}");
 
-                                await _telegramBackgroundService.SendMessage(employee.TelegramID, stringDeal);
+                                await telegramBackgroundService.SendMessage(employee.TelegramID, stringDeal);
                             }
                         }
                         else
                         {
-                            await _telegramBackgroundService.SendMessage(employee.TelegramID, "У вас нет сделок");
+                            await telegramBackgroundService.SendMessage(employee.TelegramID, "У вас нет сделок");
                         }
 
                         break;
@@ -643,13 +642,15 @@ namespace DezinsectionApp.Services.Telegram
                 {
                     ["Зарегистрироваться"]
                 }
-            );
-            replyKeyboardMarkup.ResizeKeyboard = true;
+            )
+            {
+                ResizeKeyboard = true
+            };
 
-            await _telegramBackgroundService.SendMessage(employeeId, "Вам необходимо зарегистрироваться в системе, для этого нажмите кнопку \"Зарегистрироваться\" в нижней части окна telegram и ответьте на несколько вопросов", replyKeyboardMarkup);
+            await telegramBackgroundService.SendMessage(employeeId, "Вам необходимо зарегистрироваться в системе, для этого нажмите кнопку \"Зарегистрироваться\" в нижней части окна telegram и ответьте на несколько вопросов", replyKeyboardMarkup);
         }
 
-        private ReplyKeyboardMarkup GetKeyboardByEmployeeType(EmployeeType type)
+        private static ReplyKeyboardMarkup? GetKeyboardByEmployeeType(EmployeeType type)
         {
             var replyKeyboardMarkup = new ReplyKeyboardMarkup
             {
@@ -658,8 +659,14 @@ namespace DezinsectionApp.Services.Telegram
 
             switch (type)
             {
+                case EmployeeType.NotSet:
+                    {
+                        replyKeyboardMarkup.AddButton("Проверить свой статус");
+                        break;
+                    }
                 case EmployeeType.Admin:
                     {
+                        replyKeyboardMarkup = null;
                         break;
                     }
                 case EmployeeType.Curator:
@@ -679,6 +686,7 @@ namespace DezinsectionApp.Services.Telegram
                     }
                 case EmployeeType.Operator:
                     {
+                        replyKeyboardMarkup = null;
                         break;
                     }
             }

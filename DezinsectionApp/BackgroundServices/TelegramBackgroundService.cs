@@ -1,6 +1,5 @@
 ﻿using DezinsectionApp.Entities;
 using DezinsectionApp.Services.Telegram;
-using System.ServiceModel.Channels;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -84,9 +83,9 @@ namespace DezinsectionApp.BackgroundServices
                 long employeeId = 0;
                 ChatType? chatType = null;
 
-                if (update.Type == UpdateType.Message && update.Message != null && update.Message.From != null && update.Message.Chat.Type == ChatType.Private)
+                if (update is { Type: UpdateType.Message, Message: { From: not null, Chat.Type: ChatType.Private } })
                 {
-                    _storageBackgroundService.EmployeeStore.TryGetValue(update.Message.From.Id, out employee);
+                    StorageBackgroundService.EmployeeStore.TryGetValue(update.Message.From.Id, out employee);
                     employeeId = update.Message.From.Id;
                     chatType = update.Message.Chat.Type;
 
@@ -104,16 +103,16 @@ namespace DezinsectionApp.BackgroundServices
                         return;
                     }
                 }
-                else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null && update.CallbackQuery.Message != null && update.CallbackQuery.Message.Chat.Type == ChatType.Private)
+                else if (update is { Type: UpdateType.CallbackQuery, CallbackQuery.Message: not null } && update.CallbackQuery.Message.Chat.Type == ChatType.Private)
                 {
-                    _storageBackgroundService.EmployeeStore.TryGetValue(update.CallbackQuery.From.Id, out employee);
+                    StorageBackgroundService.EmployeeStore.TryGetValue(update.CallbackQuery.From.Id, out employee);
                     employeeId = update.CallbackQuery.From.Id;
                     chatType = update.CallbackQuery.Message.Chat.Type;
                 }
 
                 if (_storageBackgroundService.State)
                 {
-                    if (chatType != null && chatType == ChatType.Private)
+                    if (chatType is ChatType.Private)
                     {
                         if (employee == null)
                         {
@@ -123,7 +122,7 @@ namespace DezinsectionApp.BackgroundServices
                                 City = string.Empty
                             };
 
-                            _storageBackgroundService.EmployeeStore.Add(employeeId, employee);
+                            StorageBackgroundService.EmployeeStore.Add(employeeId, employee);
                         }
 
                         await telegramService.ProcessMessage(update, employee);

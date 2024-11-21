@@ -86,7 +86,7 @@ namespace DezinsectionApp.Services.Ezhkh
             {
                 var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
 
-                var responce = await _serviceClient.RegisterNewEmployerAsync(employe, token);
+                await _serviceClient.RegisterNewEmployerAsync(employe, token);
 
                 return true;
             }
@@ -102,7 +102,7 @@ namespace DezinsectionApp.Services.Ezhkh
             {
                 var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
 
-                var responce = await _serviceClient.CreateDealAsync(deal, token);
+                await _serviceClient.CreateDealAsync(deal, token);
 
                 return true;
             }
@@ -143,7 +143,7 @@ namespace DezinsectionApp.Services.Ezhkh
             //формируем одну цельную строку из массива  
             foreach (byte b in byteHash)
             {
-                hash += string.Format("{0:x2}", b);
+                hash += $"{b:x2}";
             }
 
             return hash;

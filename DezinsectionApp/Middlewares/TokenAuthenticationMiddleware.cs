@@ -3,21 +3,15 @@ using System.Text;
 
 namespace DezinsectionApp.Middlewares
 {
-    public class TokenAuthenticationMiddleware
+    public class TokenAuthenticationMiddleware(RequestDelegate next)
     {
-        private readonly RequestDelegate _next;
-        private readonly string _validToken;
-
-        public TokenAuthenticationMiddleware(RequestDelegate next)
-        {
-            _next = next;
-            _validToken = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes("sobits_millenium_actanon_verba")));
-        }
+        private readonly string _validToken = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes("sobits_millenium_actanon_verba")));
 
         public async Task Invoke(HttpContext context)
         {
             if ((!context.Request.Headers.TryGetValue("Authorization", out var extractedToken) ||
-                !extractedToken.ToString().Equals($"Bearer {_validToken}", StringComparison.OrdinalIgnoreCase)) &&
+                 !extractedToken.ToString().Equals($"Bearer {_validToken}", StringComparison.OrdinalIgnoreCase)) &&
+                context.Request.Path.Value != null &&
                 !context.Request.Path.Value.Contains("assignmaster"))
             {
                 context.Response.StatusCode = 401; // Unauthorized
@@ -25,7 +19,7 @@ namespace DezinsectionApp.Middlewares
                 return;
             }
 
-            await _next(context);
+            await next(context);
         }
     }
 

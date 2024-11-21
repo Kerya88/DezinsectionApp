@@ -45,37 +45,37 @@ namespace DezinsectionApp.Entities
                 new CustomFieldsValue
                 {
                     field_id = 1077517, //кол-во комнат
-                    values = [ new() { value = requestProxy.RoomsNoData == "Да" ? $"Примерно {requestProxy.ApproximateRoomsCount}" : requestProxy.NumberApartments } ]
+                    values = [ new Value { value = requestProxy.RoomsNoData == "Да" ? $"Примерно {requestProxy.ApproximateRoomsCount}" : requestProxy.NumberApartments } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077519, //площадь
-                    values = [ new() { value = requestProxy.AreaNoData == "Да" ? $"Примерно {requestProxy.ApproximateArea}" : requestProxy.Area } ]
+                    values = [ new Value { value = requestProxy.AreaNoData == "Да" ? $"Примерно {requestProxy.ApproximateArea}" : requestProxy.Area } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077295, //регион
-                    values = [ new() { value = requestProxy.TestCountry } ]
+                    values = [ new Value { value = requestProxy.TestCountry } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077293, //город
-                    values = [ new() { value = requestProxy.Page == "Ростов" ? "Ростов на Дону" : requestProxy.Page } ]
+                    values = [ new Value { value = requestProxy.Page == "Ростов" ? "Ростов на Дону" : requestProxy.Page } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077575, //адрес объекта
-                    values = [ new() { value = requestProxy.RoomType } ]
+                    values = [ new Value { value = requestProxy.RoomType } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077683, //источник
-                    values = [ new() { value = "Сайт" } ]
+                    values = [ new Value { value = "Сайт" } ]
                 },
                 new CustomFieldsValue
                 {
                     field_id = 1077577, //комментарий
-                    values = [ new() { value = requestProxy.Form switch {
+                    values = [ new Value { value = requestProxy.Form switch {
                         "Квиз" => $"Способ связи: {requestProxy.ConnectionForm}, период обработки: {requestProxy.InsectionTime}",
                         "Прайс" => $"Способ связи: {requestProxy.ConnectionForm}, период обработки: {requestProxy.InsectionTime}",
                         _ => ""
@@ -89,7 +89,7 @@ namespace DezinsectionApp.Entities
             {
                 tags =
                 [
-                    new()
+                    new Tag
                     {
                         id = 757565
                     }
@@ -100,14 +100,14 @@ namespace DezinsectionApp.Entities
             {
                 embeded.contacts =
                 [
-                    new()
+                    new Contact
                     {
                         name = requestProxy.Phone != "0" ? requestProxy.Phone : requestProxy.TestPhone,
                         custom_fields_values =
                         [
-                            new() {
+                            new CustomFieldsValue {
                                 field_id = 983491, //телефон
-                                values = [ new() { value = requestProxy.Phone != "0" ? requestProxy.Phone : requestProxy.TestPhone, enum_id = 1235915 } ]
+                                values = [ new Value { value = requestProxy.Phone != "0" ? requestProxy.Phone : requestProxy.TestPhone, enum_id = 1235915 } ]
                             }
                         ]
                     }
@@ -150,7 +150,7 @@ namespace DezinsectionApp.Entities
             var name = contact?.name ?? string.Empty;
             var phone = contact?.custom_fields_values?.FirstOrDefault(x => x.field_id == 983491)?.values.FirstOrDefault()?.value ?? string.Empty;
 
-            var problem = string.Join(", ", custom_fields_values?.FirstOrDefault(x => x.field_id == 1077467)?.values.Select(x => x.value.ToString() ?? string.Empty));
+            var problem = string.Join(", ", custom_fields_values?.FirstOrDefault(x => x.field_id == 1077467)?.values.Select(x => x.value.ToString() ?? string.Empty) ?? Array.Empty<string>());
 
             var dateField = custom_fields_values?.FirstOrDefault(x => x.field_id == 1077571);
             var date = string.Empty;

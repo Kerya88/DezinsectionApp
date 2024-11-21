@@ -14,19 +14,17 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
 {
     public class AmoCrmLeadService(TelegramBackgroundService telegramBackgroundService, ITelegramService telegramService) : IAmoCrmLeadService
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new()
+        private static readonly JsonSerializerOptions JsonOptions = new()
         {
             Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Cyrillic),
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
         };
 
-        private readonly TelegramBackgroundService _telegramBackgroundService = telegramBackgroundService;
-        private readonly ITelegramService _telegramService = telegramService;
-        private static readonly string _postLeadsComplexEndpoint = "https://artliapin.amocrm.ru/api/v4/leads/complex";
-        private static readonly string _getLeadEndpoint = "https://artliapin.amocrm.ru/api/v4/leads";
-        private static readonly string _getContactEndpoint = "https://artliapin.amocrm.ru/api/v4/contacts/";
-        private static readonly string _amoToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImU2NzczNWZiYjViMzVhNjU3MmZkMDcyOGFjYjI2NDY3YWJhZjc0MTVhNGFkMDAzNDRhMTQwMzJkMWYwM2ZmY2YwZjY3NTdmODhiMWQ4NjVhIn0.eyJhdWQiOiI0ZDc0Y" +
+        private static readonly string PostLeadsComplexEndpoint = "https://artliapin.amocrm.ru/api/v4/leads/complex";
+        private static readonly string GetLeadEndpoint = "https://artliapin.amocrm.ru/api/v4/leads";
+        private static readonly string GetContactEndpoint = "https://artliapin.amocrm.ru/api/v4/contacts/";
+        private static readonly string AmoToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImU2NzczNWZiYjViMzVhNjU3MmZkMDcyOGFjYjI2NDY3YWJhZjc0MTVhNGFkMDAzNDRhMTQwMzJkMWYwM2ZmY2YwZjY3NTdmODhiMWQ4NjVhIn0.eyJhdWQiOiI0ZDc0Y" +
             "Tk3YS0wZDdhLTRmZWMtOGQ5My0xNjU3MzU2OGE5NmUiLCJqdGkiOiJlNjc3MzVmYmI1YjM1YTY1NzJmZDA3MjhhY2IyNjQ2N2FiYWY3NDE1YTRhZDAwMzQ0YTE0MDMyZDFmMDNmZmNmMGY2NzU3Zjg4YjFkODY1YSIsImlhdCI6MTcyNzg2ODM0MSwibmJmIjoxNzI3O" +
             "DY4MzQxLCJleHAiOjE3NTk0NDk2MDAsInN1YiI6IjExNDMxMTk0IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMxMTUzMzEwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJjcm0iLCJmaWxlcyIsImZpbGVzX2Rlb" +
             "GV0ZSIsIm5vdGlmaWNhdGlvbnMiLCJwdXNoX25vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiMjFmNzUzNTEtMTEzNy00N2YwLWFkYzItNTY3ZDllMTZmMjk5IiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.KETAvr5Cg4CyZe5vaRKYMtEagpAG5Lhu" +
@@ -37,7 +35,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
         {
             rawLead = Uri.UnescapeDataString(rawLead).Replace("+", " ");
 
-            var infoTask = _telegramBackgroundService.SendInfoMessage(rawLead);
+            var infoTask = telegramBackgroundService.SendInfoMessage(rawLead);
 
             var creatiumLead = CreatiumLead.ParseToObject(rawLead);
             var amoLead = AmoLead.ParseRequestToAmo(creatiumLead);
@@ -47,50 +45,50 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             using (var client = new HttpClient())
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _amoToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
 
-                response = await client.PostAsJsonAsync(_postLeadsComplexEndpoint, amoLead, _jsonOptions);
+                response = await client.PostAsJsonAsync(PostLeadsComplexEndpoint, amoLead, JsonOptions);
             }
 
             await infoTask;
             if (response.IsSuccessStatusCode)
             {
-                await _telegramBackgroundService.SendInfoMessage($"Успешно обработано:\n{response.Content.ReadAsStringAsync().Result}");
+                await telegramBackgroundService.SendInfoMessage($"Успешно обработано:\n{response.Content.ReadAsStringAsync().Result}");
             }
             else
             {
-                var sentJson = JsonSerializer.Serialize(amoLead, _jsonOptions);
+                var sentJson = JsonSerializer.Serialize(amoLead, JsonOptions);
 
-                await _telegramBackgroundService.SendInfoMessage($"\nОтправленый JSON:\n{sentJson}\nОшибка:\n{response.Content.ReadAsStringAsync().Result}");
+                await telegramBackgroundService.SendInfoMessage($"\nОтправленый JSON:\n{sentJson}\nОшибка:\n{response.Content.ReadAsStringAsync().Result}");
             }
         }
 
         public async Task AssignMaster(string rawRequest)
         {
             rawRequest = Uri.UnescapeDataString(rawRequest);
-            await _telegramBackgroundService.SendInfoMessage(rawRequest);
+            await telegramBackgroundService.SendInfoMessage(rawRequest);
 
             var leadId = rawRequest.Split("&")[0].Split("=")[1];
             var lead = await GetLead(leadId);
             if (lead == null)
             {
-                await _telegramBackgroundService.SendInfoMessage($"Не удалось запросить и десериализовать заявку\n\b{rawRequest}");
+                await telegramBackgroundService.SendInfoMessage($"Не удалось запросить и десериализовать заявку\n\b{rawRequest}");
                 return;
             }
 
             var contact = lead._embedded?.contacts?.FirstOrDefault();
-            if (contact == null || contact.id == null)
+            if (contact?.id == null)
             {
-                await _telegramBackgroundService.SendInfoMessage($"В заявке нет ни одного контакта\n\b{rawRequest}");
+                await telegramBackgroundService.SendInfoMessage($"В заявке нет ни одного контакта\n\b{rawRequest}");
                 return;
             }
 
-            contact = await GetContact(contact.id.ToString());
-            lead._embedded.contacts = [contact];
+            contact = await GetContact(contact!.id!.ToString()!);
+            lead!._embedded!.contacts = [contact!];
 
-            await _telegramBackgroundService.SendInfoMessage($"{lead}");
+            await telegramBackgroundService.SendInfoMessage($"{lead}");
 
-            await _telegramService.NotifyCurator(lead);
+            await telegramService.NotifyCurator(lead);
         }
 
         public async Task<AmoLead?> GetLead(string leadId)
@@ -100,9 +98,9 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             using (var client = new HttpClient())
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _amoToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
 
-                response = await client.GetAsync(_getLeadEndpoint + "/" + leadId + "?with=contacts");
+                response = await client.GetAsync(GetLeadEndpoint + "/" + leadId + "?with=contacts");
             }
 
             if (response.IsSuccessStatusCode)
@@ -124,11 +122,11 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             using (var client = new HttpClient())
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _amoToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
 
                 var content = new StringContent(request, Encoding.UTF8, "application/json");
 
-                response = await client.PatchAsync(_getLeadEndpoint, content);
+                response = await client.PatchAsync(GetLeadEndpoint, content);
             }
 
             if (response.IsSuccessStatusCode)
@@ -148,9 +146,9 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             using (var client = new HttpClient())
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _amoToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
 
-                response = await client.GetAsync(_getContactEndpoint + contactId);
+                response = await client.GetAsync(GetContactEndpoint + contactId);
             }
 
             if (response.IsSuccessStatusCode)
@@ -172,7 +170,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
                 return false;
             }
 
-            await _telegramService.NotifyMaster(notifyProxy);
+            await telegramService.NotifyMaster(notifyProxy);
 
             if (notifyProxy.sendToAmo)
             {

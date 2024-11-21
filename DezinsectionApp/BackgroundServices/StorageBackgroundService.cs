@@ -11,7 +11,7 @@ namespace DezinsectionApp.BackgroundServices
         private readonly IEzhkhService _ezhkhService;
         private readonly IConfiguration _configuration;
 
-        public Dictionary<long, Employee> EmployeeStore { get; set; }
+        public static Dictionary<long, Employee> EmployeeStore { get; set; }
         public bool State { get; set; }
         public CrmCityProxy[] Citys { get; set; }
 
