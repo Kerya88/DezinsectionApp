@@ -48,7 +48,7 @@ namespace DezinsectionApp.BackgroundServices
                     {
                         EmployeeStore.Add(tgId, new Employee
                         {
-                            TelegramID = tgId.ToString(),
+                            TelegramID = x.TelegramID,
                             Phone = x.Phone,
                             FIO = x.FIO,
                             Code = x.Code,

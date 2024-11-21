@@ -115,7 +115,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             }
         }
 
-        public async Task<bool> ChangeLead(string leadId, string masterName)
+        public async Task<bool> AssignOrReplaceMaster(string leadId, string masterName)
         {
             var request = $"[{{\"id\": {leadId},\"status_id\": 58596858,\"updated_by\": 0,\"custom_fields_values\": [{{\"field_id\": 1776661,\"values\": [{{\"value\": true}}]}},{{\"field_id\": 1077579,\"values\": [{{\"value\": \"{masterName}\"}}]}}]}}]";
 
@@ -176,7 +176,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
 
             if (notifyProxy.sendToAmo)
             {
-                var amoSuccess = await ChangeLead(notifyProxy.leadId, notifyProxy.masterCrmName);
+                var amoSuccess = await AssignOrReplaceMaster(notifyProxy.leadId, notifyProxy.masterCrmName);
 
                 return amoSuccess;
             }
