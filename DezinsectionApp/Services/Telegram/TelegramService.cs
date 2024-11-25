@@ -5,10 +5,14 @@ using DezinsectionApp.Extentions;
 using DezinsectionApp.Services.AmoCrm.Lead;
 using DezinsectionApp.Services.Ezhkh;
 using GJIService;
+using Microsoft.IdentityModel.Tokens;
+using System.Diagnostics.Metrics;
+using System.ServiceModel.Channels;
 using System.Text.RegularExpressions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace DezinsectionApp.Services.Telegram
 {
@@ -16,6 +20,7 @@ namespace DezinsectionApp.Services.Telegram
     {
         private static readonly Regex FioRegex = new(@"^[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}\s[А-ЯЁ]{1}[а-яё]{1,}$");
         private static readonly Regex PhoneRegex = new(@"^(\+7|8)9\d{9}$");
+        private static readonly Regex SumRegex = new(@"^\d+$");
 
         public async Task ProcessMessage(Update update, Employee employee)
         {
@@ -151,6 +156,25 @@ namespace DezinsectionApp.Services.Telegram
 
                                         break;
                                     }
+                                case UserActivityStateType.Sum:
+                                    {
+                                        var sum = message.Text.Trim();
+
+                                        if (SumRegex.IsMatch(sum))
+                                        {
+                                            StorageBackgroundService.LeadStore[message.Chat.Id].Budget = sum;
+
+                                            employee.UserActivityStateType = UserActivityStateType.Report;
+
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Отправьте фотографию договора");
+                                        }
+                                        else
+                                        {
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Введите число");
+                                        }
+
+                                        break;
+                                    }
                                 case UserActivityStateType.NotSet:
                                     {
                                         if (string.IsNullOrEmpty(employee.TelegramID))
@@ -220,10 +244,9 @@ namespace DezinsectionApp.Services.Telegram
                                     var date = deal.DealDetails.Split("визита: ")[1].Split("\n")[0];
 
                                     var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
-                                        {
-                                            [InlineKeyboardButton.WithCallbackData("Изменить мастера", $"Наз%{deal.DealId}%{city}%{date}")],
-                                        }
-                                    );
+                                    {
+                                        [InlineKeyboardButton.WithCallbackData("Изменить мастера", $"Наз%{deal.DealId}%{city}%{date}")]
+                                    });
 
                                     await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, $"Мастер: {deal.MasterData}\n{deal.DealDetails}", replyKeyboardMarkup);
                                 }
@@ -253,10 +276,9 @@ namespace DezinsectionApp.Services.Telegram
                                     var date = deal.DealDetails.Split("визита: ")[1].Split("\n")[0];
 
                                     var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
-                                        {
-                                            [InlineKeyboardButton.WithCallbackData("Назначить мастера", $"Наз%{deal.DealId}%{city}%{date}")],
-                                        }
-                                    );
+                                    {
+                                        [InlineKeyboardButton.WithCallbackData("Назначить мастера", $"Наз%{deal.DealId}%{city}%{date}")],
+                                    });
 
                                     await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, deal.DealDetails, replyKeyboardMarkup);
                                 }
@@ -265,6 +287,22 @@ namespace DezinsectionApp.Services.Telegram
                             {
                                 await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "По всем сделкам мастер назначен");
                             }
+
+                            break;
+                        }
+                    case "Отч":
+                        {
+                            var dealId = update.CallbackQuery.Data.Split("%")[1];
+
+                            if (!StorageBackgroundService.LeadStore.TryAdd(update.CallbackQuery.Message.Chat.Id, new DealProxy { DealId = dealId }))
+                            {
+                                StorageBackgroundService.LeadStore.Remove(update.CallbackQuery.Message.Chat.Id);
+                                StorageBackgroundService.LeadStore.Add(update.CallbackQuery.Message.Chat.Id, new DealProxy { DealId = dealId });
+                            }
+
+                            employee.UserActivityStateType = UserActivityStateType.Sum;
+
+                            await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Введите сумму сделки");
 
                             break;
                         }
@@ -493,6 +531,47 @@ namespace DezinsectionApp.Services.Telegram
                         }
                 }
             }
+            else if (update is { Type: UpdateType.Message, Message.Type: MessageType.Photo } && !update.Message.Photo.IsNullOrEmpty() && employee.UserActivityStateType == UserActivityStateType.Report)
+            {
+                var message = update.Message;
+
+                var largestPhoto = update.Message.Photo!.Last();
+
+                var file = await telegramBackgroundService.GetFile(largestPhoto.FileId);
+
+                var ezhkh = await ezhkhService.UpdateDeal(StorageBackgroundService.LeadStore[message.Chat.Id]);
+                
+                if (!ezhkh)
+                {
+                    await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    return;
+                }
+
+                StorageBackgroundService.LeadStore[message.Chat.Id].MasterData = StorageBackgroundService.EmployeeStore[message.Chat.Id].CrmName;
+
+                var amoService = ServiceLocator.Instance.GetRequiredService<IAmoCrmLeadService>();
+
+                var fileProxy = await amoService.SendReport(StorageBackgroundService.LeadStore[message.Chat.Id], file);
+
+                if (fileProxy == null)
+                {
+                    StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
+                    await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    return;
+                }
+
+                var amo = await amoService.UpdateReport(StorageBackgroundService.LeadStore[message.Chat.Id], fileProxy);
+
+                if (!amo)
+                {
+                    StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
+                    await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    return;
+                }
+
+                StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
+                await telegramBackgroundService.SendMessage(message.Chat.Id, "Отчет отправлен");
+            }
         }
 
         public async Task NotifyCurator(AmoLead lead)
@@ -593,11 +672,10 @@ namespace DezinsectionApp.Services.Telegram
                 case EmployeeType.Curator:
                     {
                         var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
-                            {
-                                ["По которым назначен мастер"],
-                                ["По которым НЕ назначен мастер"]
-                            }
-                        );
+                        {
+                            ["По которым назначен мастер"],
+                            ["По которым НЕ назначен мастер"]
+                        });
 
                         await telegramBackgroundService.SendMessage(employee.TelegramID, "Какие сделки вас интересуют?", replyKeyboardMarkup);
 
@@ -621,9 +699,14 @@ namespace DezinsectionApp.Services.Telegram
                         {
                             foreach (var deal in deals)
                             {
+                                var replyKeyboardMarkup = new InlineKeyboardMarkup(new InlineKeyboardButton[][]
+                                {
+                                    [InlineKeyboardButton.WithCallbackData("Отправить отчет", $"Отч%{deal.DealId}")]
+                                });
+
                                 var stringDeal = string.Join("\n", $"Сумма: {deal.Budget}", $"Дата и время визита: {deal.DealDateTime}", $"Комментарий: {deal.DealDetails}");
 
-                                await telegramBackgroundService.SendMessage(employee.TelegramID, stringDeal);
+                                await telegramBackgroundService.SendMessage(employee.TelegramID, stringDeal, replyKeyboardMarkup);
                             }
                         }
                         else
@@ -639,10 +722,9 @@ namespace DezinsectionApp.Services.Telegram
         private async Task SendRegistrationInfo(long employeeId)
         {
             var replyKeyboardMarkup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-                {
-                    ["Зарегистрироваться"]
-                }
-            )
+            {
+                ["Зарегистрироваться"]
+            })
             {
                 ResizeKeyboard = true
             };

@@ -19,13 +19,13 @@ namespace DezinsectionApp.Enums
         [Display(Name = "Город")]
         City = 4,
 
-        [Display(Name = "Отчет")]
-        Report = 5,
-
         [Display(Name = "Назначение мастера")]
-        AssignMaster = 6,
+        AssignMaster = 5,
 
-        [Display(Name = "Ожидает сделки")]
-        WaitLeads = 7
+        [Display(Name = "Сумма сделки")]
+        Sum = 6,
+
+        [Display(Name = "Отчет")]
+        Report = 7
     }
 }

@@ -12,6 +12,7 @@ namespace DezinsectionApp.BackgroundServices
         private readonly IConfiguration _configuration;
 
         public static Dictionary<long, Employee> EmployeeStore { get; set; }
+        public static Dictionary<long, DealProxy> LeadStore { get; set; } = [];
         public bool State { get; set; }
         public CrmCityProxy[] Citys { get; set; }
 

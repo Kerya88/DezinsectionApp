@@ -1,5 +1,6 @@
 ﻿using DezinsectionApp.Entities;
 using DezinsectionApp.Services.Telegram;
+using System.IO;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -25,7 +26,14 @@ namespace DezinsectionApp.BackgroundServices
 
         public async Task SendInfoMessage(string message)
         {
-            await _infoBot.SendMessage(_configuration["InfoChatId"]!, message);
+            try
+            {
+                await _infoBot.SendMessage(_configuration["InfoChatId"]!, message);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
         public async Task SendMessage(long chatId, string message, IReplyMarkup? replyMarkup = default)
@@ -66,6 +74,33 @@ namespace DezinsectionApp.BackgroundServices
             }
         }
 
+        public async Task<byte[]> GetFile(string fileId)
+        {
+            try
+            {
+                var file = await _infoBot.GetFile(fileId);
+
+                if (file != null)
+                {
+                    await using (var ms = new MemoryStream())
+                    {
+                        await _infoBot.DownloadFile(file.FilePath!, ms);
+
+                        return ms.ToArray();
+                    }
+                }
+                else
+                {
+                    return [];
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return [];
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _infoBot.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), cancellationToken: stoppingToken);
@@ -103,7 +138,7 @@ namespace DezinsectionApp.BackgroundServices
                         return;
                     }
                 }
-                else if (update is { Type: UpdateType.CallbackQuery, CallbackQuery.Message: not null } && update.CallbackQuery.Message.Chat.Type == ChatType.Private)
+                else if (update is { Type: UpdateType.CallbackQuery, CallbackQuery.Message: not null, CallbackQuery.Message.Chat.Type: ChatType.Private })
                 {
                     StorageBackgroundService.EmployeeStore.TryGetValue(update.CallbackQuery.From.Id, out employee);
                     employeeId = update.CallbackQuery.From.Id;

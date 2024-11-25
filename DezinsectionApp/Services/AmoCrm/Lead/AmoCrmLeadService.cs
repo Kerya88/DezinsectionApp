@@ -1,7 +1,10 @@
 ﻿using DezinsectionApp.BackgroundServices;
 using DezinsectionApp.Entities;
 using DezinsectionApp.Services.Telegram;
+using GJIService;
+using System;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -9,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using Telegram.Bot.Requests.Abstractions;
 
 namespace DezinsectionApp.Services.AmoCrm.Lead
 {
@@ -24,6 +28,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
         private static readonly string PostLeadsComplexEndpoint = "https://artliapin.amocrm.ru/api/v4/leads/complex";
         private static readonly string GetLeadEndpoint = "https://artliapin.amocrm.ru/api/v4/leads";
         private static readonly string GetContactEndpoint = "https://artliapin.amocrm.ru/api/v4/contacts/";
+        private static readonly string SessionEndpoint = "https://drive-b.amocrm.ru/v1.0/sessions";
         private static readonly string AmoToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImU2NzczNWZiYjViMzVhNjU3MmZkMDcyOGFjYjI2NDY3YWJhZjc0MTVhNGFkMDAzNDRhMTQwMzJkMWYwM2ZmY2YwZjY3NTdmODhiMWQ4NjVhIn0.eyJhdWQiOiI0ZDc0Y" +
             "Tk3YS0wZDdhLTRmZWMtOGQ5My0xNjU3MzU2OGE5NmUiLCJqdGkiOiJlNjc3MzVmYmI1YjM1YTY1NzJmZDA3MjhhY2IyNjQ2N2FiYWY3NDE1YTRhZDAwMzQ0YTE0MDMyZDFmMDNmZmNmMGY2NzU3Zjg4YjFkODY1YSIsImlhdCI6MTcyNzg2ODM0MSwibmJmIjoxNzI3O" +
             "DY4MzQxLCJleHAiOjE3NTk0NDk2MDAsInN1YiI6IjExNDMxMTk0IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMxMTUzMzEwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJjcm0iLCJmaWxlcyIsImZpbGVzX2Rlb" +
@@ -139,6 +144,54 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             }
         }
 
+        public async Task<bool> UpdateReport(DealProxy deal, FileResponceProxy file)
+        {
+            var request = $@"[
+                                 {{
+                                    ""id"": {deal.DealId},
+                                    ""price"": {deal.Budget},
+                                    ""updated_by"": 0,
+                                    ""custom_fields_values"": [
+                                        {{
+                                            ""field_id"": 1776755,
+                                            ""values"": [
+                                                {{
+                                                    ""value"": {{
+                                                        ""file_uuid"": ""{file.uuid}"",
+                                                        ""version_uuid"": ""{file.version_uuid}"",
+                                                        ""file_name"": ""{file.name}"",
+                                                        ""file_size"": {file.size}
+                                                    }}
+                                                }}
+                                            ]
+                                        }}
+                                    ]
+                                 }}
+                             ]";
+
+            HttpResponseMessage response;
+
+            using (var client = new HttpClient())
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
+
+                var content = new StringContent(request, Encoding.UTF8, "application/json");
+
+                response = await client.PatchAsync(GetLeadEndpoint, content);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                var ss = response.Content.ReadAsStringAsync();
+                return false;
+            }
+        }
+
         public async Task<Contact?> GetContact(string contactId)
         {
             HttpResponseMessage response;
@@ -181,5 +234,89 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
 
             return true;
         }
+
+        public async Task<FileResponceProxy?> SendReport(DealProxy deal, byte[] file)
+        {
+            var fileName = $"Отчет {deal.MasterData}.jpg";
+
+            var sessionRequest = $@"{{
+                                      ""file_name"": ""{fileName}"",
+                                      ""file_size"": {file.Length}
+                                    }}";
+
+            HttpResponseMessage response;
+
+            using (var client = new HttpClient())
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AmoToken);
+
+                var content = new StringContent(sessionRequest, Encoding.UTF8, "application/json");
+
+                response = await client.PostAsync(SessionEndpoint, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var sessionProxy = await response.Content.ReadFromJsonAsync<SessionProxy>();
+                var maxPartSize = sessionProxy!.max_part_size;
+
+                var requestCount = file.Length % maxPartSize == 0 ? file.Length / (maxPartSize) : file.Length / (maxPartSize) + 1;
+
+                for (var i = 0; i < requestCount - 1; i++)
+                {
+                    var data = file.Skip(i * (maxPartSize)).Take(maxPartSize).ToArray();
+
+                    var fileContent = new ByteArrayContent(data);
+
+                    response = await client.PostAsync(sessionProxy!.next_url ??= sessionProxy.upload_url, fileContent);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return null;
+                    }
+
+                    sessionProxy = await response.Content.ReadFromJsonAsync<SessionProxy>();
+                }
+
+                var lastData = file.Skip((requestCount - 1) * (maxPartSize)).Take(maxPartSize).ToArray();
+
+                var lastFileContent = new ByteArrayContent(lastData);
+
+                response = await client.PostAsync(sessionProxy!.next_url ??= sessionProxy.upload_url, lastFileContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var ss = response.Content.ReadAsStringAsync();
+
+                    return null;
+                }
+
+                var aa = response.Content.ReadAsStringAsync();
+
+                var fileResponceProxy = await response.Content.ReadFromJsonAsync<FileResponceProxy>();
+
+                return fileResponceProxy;
+            }
+        }
+    }
+
+    public class SessionProxy
+    {
+        public int max_file_size { get; set; }
+        public int max_part_size { get; set; }
+        public int session_id { get; set; }
+        public string upload_url { get; set; }
+        public string next_url { get; set; }
+    }
+
+    public class FileResponceProxy
+    {
+        public string uuid { get; set; }
+        public string name { get; set; }
+        public int size { get; set; }
+        public string version_uuid { get; set; }
     }
 }
