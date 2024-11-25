@@ -80,6 +80,10 @@ namespace GJIService
         [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
         System.Threading.Tasks.Task<GJIService.CreateDealProxyResponce> CreateDealAsync(GJIService.DealProxy DealProxy, string Token);
         
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/UpdateDeal", ReplyAction="http://tempuri.org/IUrbanAppealService/UpdateDealResponse")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        System.Threading.Tasks.Task<GJIService.UpdateDealProxyResponce> UpdateDealAsync(GJIService.DealProxy DealProxy, string Token);
+        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetMyDeals", ReplyAction="http://tempuri.org/IUrbanAppealService/GetMyDealsResponse")]
         [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
         System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig);
@@ -497,6 +501,46 @@ namespace GJIService
             set
             {
                 this.messageField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/")]
+    public partial class UpdateDealProxyResponce
+    {
+        
+        private string responceTextField;
+        
+        private RequestResult requestResultField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string ResponceText
+        {
+            get
+            {
+                return this.responceTextField;
+            }
+            set
+            {
+                this.responceTextField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public RequestResult RequestResult
+        {
+            get
+            {
+                return this.requestResultField;
+            }
+            set
+            {
+                this.requestResultField = value;
             }
         }
     }
@@ -2917,6 +2961,11 @@ namespace GJIService
         public System.Threading.Tasks.Task<GJIService.CreateDealProxyResponce> CreateDealAsync(GJIService.DealProxy DealProxy, string Token)
         {
             return base.Channel.CreateDealAsync(DealProxy, Token);
+        }
+        
+        public System.Threading.Tasks.Task<GJIService.UpdateDealProxyResponce> UpdateDealAsync(GJIService.DealProxy DealProxy, string Token)
+        {
+            return base.Channel.UpdateDealAsync(DealProxy, Token);
         }
         
         public System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig)

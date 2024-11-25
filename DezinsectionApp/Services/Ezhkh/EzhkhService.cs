@@ -130,6 +130,22 @@ namespace DezinsectionApp.Services.Ezhkh
             }
         }
 
+        public async Task<bool> UpdateDeal(DealProxy deal)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.UpdateDealAsync(deal, token);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         private static string ComputeHash(string hashBase)
         {
             //переводим строку в байт-массим  
