@@ -7,6 +7,7 @@ using DezinsectionApp.Services.Ezhkh;
 using GJIService;
 using Microsoft.IdentityModel.Tokens;
 using System.Diagnostics.Metrics;
+using System.IO;
 using System.ServiceModel.Channels;
 using System.Text.RegularExpressions;
 using Telegram.Bot.Types;
@@ -72,7 +73,22 @@ namespace DezinsectionApp.Services.Telegram
                             }
                             else
                             {
-                                await telegramBackgroundService.SendMessage(message.Chat.Id, "Вы получили отчет");
+                                var fileResponce = await ezhkhService.GetWorkerReportFile(message.Chat.Id.ToString());
+
+                                if (fileResponce == null || string.IsNullOrEmpty(fileResponce.FileName) || string.IsNullOrEmpty(fileResponce.File))
+                                {
+                                    await telegramBackgroundService.SendMessage(message.Chat.Id, "Сервис не доступен, попробуйте позже");
+                                    break;
+                                }
+
+                                var fileBytes = Convert.FromBase64String(fileResponce.File);
+
+                                using (var ms = new MemoryStream(fileBytes))
+                                {
+                                    var inputFile = InputFile.FromStream(ms, fileResponce.FileName);
+
+                                    await telegramBackgroundService.SendDocument(message.Chat.Id, inputFile);
+                                }
                             }
                             break;
                         }
@@ -754,6 +770,7 @@ namespace DezinsectionApp.Services.Telegram
                 case EmployeeType.Curator:
                     {
                         replyKeyboardMarkup.AddButton("Мои сделки");
+                        replyKeyboardMarkup.AddNewRow("Получить отчет за день");
                         break;
                     }
                 case EmployeeType.ExternalCurator:

@@ -12,5 +12,6 @@ namespace DezinsectionApp.Services.Ezhkh
         public Task<bool> CreateDeal(DealProxy deal);
         public Task<DealProxy[]?> GetMyDeals(string employeeId, bool? isReassig = null);
         public Task<bool> UpdateDeal(DealProxy deal);
+        public Task<GetFileResponse?> GetWorkerReportFile(string employeeId);
     }
 }

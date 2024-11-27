@@ -87,6 +87,10 @@ namespace GJIService
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetMyDeals", ReplyAction="http://tempuri.org/IUrbanAppealService/GetMyDealsResponse")]
         [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
         System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IUrbanAppealService/GetWorkerReportFile", ReplyAction="http://tempuri.org/IUrbanAppealService/GetWorkerReportFileResponse")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        System.Threading.Tasks.Task<GJIService.GetFileResponse> GetWorkerReportFileAsync(string TelegramId, string Token);
     }
     
     /// <remarks/>
@@ -2971,6 +2975,11 @@ namespace GJIService
         public System.Threading.Tasks.Task<GJIService.GetMyDealsResponce> GetMyDealsAsync(string Token, string TelegramId, string IsReassig)
         {
             return base.Channel.GetMyDealsAsync(Token, TelegramId, IsReassig);
+        }
+        
+        public System.Threading.Tasks.Task<GJIService.GetFileResponse> GetWorkerReportFileAsync(string TelegramId, string Token)
+        {
+            return base.Channel.GetWorkerReportFileAsync(TelegramId, Token);
         }
         
         public virtual System.Threading.Tasks.Task OpenAsync()

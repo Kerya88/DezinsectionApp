@@ -55,6 +55,25 @@ namespace DezinsectionApp.BackgroundServices
             }
         }
 
+        public async Task SendDocument(long chatId, InputFile document)
+        {
+            try
+            {
+                if (_storageBackgroundService.State)
+                {
+                    await _infoBot.SendDocument(chatId, document);
+                }
+                else
+                {
+                    await _infoBot.SendMessage(chatId, "Бот деактивирован");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
         public async Task SendMessage(string chatId, string message, IReplyMarkup? replyMarkup = default)
         {
             try

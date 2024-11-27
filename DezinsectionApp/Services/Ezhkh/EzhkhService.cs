@@ -146,6 +146,22 @@ namespace DezinsectionApp.Services.Ezhkh
             }
         }
 
+        public async Task<GetFileResponse?> GetWorkerReportFile(string employeeId)
+        {
+            try
+            {
+                var token = ComputeHash("huiktozalezet" + DateTime.Now.ToString("dd"));
+
+                var responce = await _serviceClient.GetWorkerReportFileAsync(employeeId, token);
+
+                return responce;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         private static string ComputeHash(string hashBase)
         {
             //переводим строку в байт-массим  
