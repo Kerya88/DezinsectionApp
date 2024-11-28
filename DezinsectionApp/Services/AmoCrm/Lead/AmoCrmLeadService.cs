@@ -2,21 +2,17 @@
 using DezinsectionApp.Entities;
 using DezinsectionApp.Services.Telegram;
 using GJIService;
-using System;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
-using Telegram.Bot.Requests.Abstractions;
 
 namespace DezinsectionApp.Services.AmoCrm.Lead
 {
-    public class AmoCrmLeadService(TelegramBackgroundService telegramBackgroundService, ITelegramService telegramService) : IAmoCrmLeadService
+    public class AmoCrmLeadService(ITelegramService telegramService) : IAmoCrmLeadService
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -40,7 +36,7 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
         {
             rawLead = Uri.UnescapeDataString(rawLead).Replace("+", " ");
 
-            var infoTask = telegramBackgroundService.SendInfoMessage(rawLead);
+            var infoTask = telegramService.SendInfoMessage(rawLead);
 
             var creatiumLead = CreatiumLead.ParseToObject(rawLead);
             var amoLead = AmoLead.ParseRequestToAmo(creatiumLead);
@@ -58,40 +54,40 @@ namespace DezinsectionApp.Services.AmoCrm.Lead
             await infoTask;
             if (response.IsSuccessStatusCode)
             {
-                await telegramBackgroundService.SendInfoMessage($"Успешно обработано:\n{response.Content.ReadAsStringAsync().Result}");
+                await telegramService.SendInfoMessage($"Успешно обработано:\n{response.Content.ReadAsStringAsync().Result}");
             }
             else
             {
                 var sentJson = JsonSerializer.Serialize(amoLead, JsonOptions);
 
-                await telegramBackgroundService.SendInfoMessage($"\nОтправленый JSON:\n{sentJson}\nОшибка:\n{response.Content.ReadAsStringAsync().Result}");
+                await telegramService.SendInfoMessage($"\nОтправленый JSON:\n{sentJson}\nОшибка:\n{response.Content.ReadAsStringAsync().Result}");
             }
         }
 
         public async Task AssignMaster(string rawRequest)
         {
             rawRequest = Uri.UnescapeDataString(rawRequest);
-            await telegramBackgroundService.SendInfoMessage(rawRequest);
+            await telegramService.SendInfoMessage(rawRequest);
 
             var leadId = rawRequest.Split("&")[0].Split("=")[1];
             var lead = await GetLead(leadId);
             if (lead == null)
             {
-                await telegramBackgroundService.SendInfoMessage($"Не удалось запросить и десериализовать заявку\n\b{rawRequest}");
+                await telegramService.SendInfoMessage($"Не удалось запросить и десериализовать заявку\n\b{rawRequest}");
                 return;
             }
 
             var contact = lead._embedded?.contacts?.FirstOrDefault();
             if (contact?.id == null)
             {
-                await telegramBackgroundService.SendInfoMessage($"В заявке нет ни одного контакта\n\b{rawRequest}");
+                await telegramService.SendInfoMessage($"В заявке нет ни одного контакта\n\b{rawRequest}");
                 return;
             }
 
             contact = await GetContact(contact!.id!.ToString()!);
             lead!._embedded!.contacts = [contact!];
 
-            await telegramBackgroundService.SendInfoMessage($"{lead}");
+            await telegramService.SendInfoMessage($"{lead}");
 
             await telegramService.NotifyCurator(lead);
         }

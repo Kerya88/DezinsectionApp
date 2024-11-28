@@ -1,5 +1,7 @@
 
-using RequestReceiver.Middlewares;
+using Microsoft.AspNetCore.Authentication;
+using RequestReceiver.Authentication;
+using RequestReceiver.Services.RabbitMq;
 
 namespace RequestReceiver
 {
@@ -12,6 +14,10 @@ namespace RequestReceiver
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+            builder.Services.AddSingleton<RabbitMqService>();
+
+            builder.Services.AddAuthentication("CustomToken")
+                .AddScheme<AuthenticationSchemeOptions, TokenAuthenticationHandler>("CustomToken", null);
 
             var app = builder.Build();
 
@@ -21,7 +27,8 @@ namespace RequestReceiver
                 app.UseSwaggerUI();
             }
 
-            app.UseMiddleware<TokenAuthenticationMiddleware>();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapControllers();
 

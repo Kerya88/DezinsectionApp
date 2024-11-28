@@ -22,6 +22,11 @@ namespace DezinsectionApp.Services.Telegram
         private static readonly Regex PhoneRegex = new(@"^(\+7|8)9\d{9}$");
         private static readonly Regex SumRegex = new(@"^\d+$");
 
+        public async Task SendInfoMessage(string message)
+        {
+            await telegramBackgroundService.SendInfoMessage(message);
+        }
+
         public async Task ProcessMessage(Update update, Employee employee)
         {
             if (update is { Type: UpdateType.Message, Message.Type: MessageType.Text } && !string.IsNullOrEmpty(update.Message.Text))

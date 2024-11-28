@@ -1,6 +1,5 @@
 
 using DezinsectionApp.BackgroundServices;
-using DezinsectionApp.Middlewares;
 using DezinsectionApp.Services.AmoCrm.Lead;
 using DezinsectionApp.Services.Ezhkh;
 using DezinsectionApp.Services.Telegram;
@@ -23,28 +22,12 @@ namespace DezinsectionApp
             builder.Services.AddHostedService<StorageBackgroundService>();
             builder.Services.AddSingleton<TelegramBackgroundService>();
             builder.Services.AddHostedService<TelegramBackgroundService>();
+            builder.Services.AddHostedService<RabbitMqBackgroundService>();
             builder.Services.AddTransient<ITelegramService, TelegramService>();
             builder.Services.AddTransient<IAmoCrmLeadService, AmoCrmLeadService>();
 
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-
             var app = builder.Build();
             ServiceLocator.Init(app.Services);
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-
-            //app.UseHttpsRedirection();
-
-            app.UseMiddleware<TokenAuthenticationMiddleware>();
-
-            app.MapControllers();
 
             app.Run();
         }
