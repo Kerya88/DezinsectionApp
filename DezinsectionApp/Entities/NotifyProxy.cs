@@ -7,5 +7,6 @@
         public string masterCrmName { get; set; }
         public bool sendToAmo { get; set; }
         public string lead { get; set; }
+        public bool report { get; set; }
     }
 }

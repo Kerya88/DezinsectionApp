@@ -77,6 +77,7 @@ namespace DezinsectionApp.Services.Telegram
                                 if (fileResponce == null || string.IsNullOrEmpty(fileResponce.FileName) || string.IsNullOrEmpty(fileResponce.File))
                                 {
                                     await telegramBackgroundService.SendMessage(message.Chat.Id, "Сервис не доступен, попробуйте позже");
+                                    await telegramBackgroundService.SendInfoMessage("Не удалось получить отчет за день");
                                     break;
                                 }
 
@@ -181,7 +182,7 @@ namespace DezinsectionApp.Services.Telegram
 
                                             employee.UserActivityStateType = UserActivityStateType.Report;
 
-                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Отправьте фотографию договора");
+                                            await telegramBackgroundService.SendMessage(message.Chat.Id, "Отправьте фотографию лицевой стороны договора");
                                         }
                                         else
                                         {
@@ -248,6 +249,7 @@ namespace DezinsectionApp.Services.Telegram
                             if (deals == null)
                             {
                                 await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                await telegramBackgroundService.SendInfoMessage("Не удалось получить сделки");
                                 break;
                             }
 
@@ -280,6 +282,7 @@ namespace DezinsectionApp.Services.Telegram
                             if (deals == null)
                             {
                                 await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Сервис недоступен");
+                                await telegramBackgroundService.SendInfoMessage("Не удалось получить сделки");
                                 break;
                             }
 
@@ -531,7 +534,7 @@ namespace DezinsectionApp.Services.Telegram
 
                                         if (!success)
                                         {
-                                            await telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера или смена статуса!\n\n{lead}");
+                                            await telegramBackgroundService.SendInfoMessage($"Не удалось назначить мастера или сменить статус!\n\n{lead}");
                                             await telegramBackgroundService.SendMessage(update.CallbackQuery.Message.Chat.Id, "Не удалось назначить мастера");
                                         }
                                         else
@@ -550,7 +553,9 @@ namespace DezinsectionApp.Services.Telegram
             {
                 var message = update.Message;
 
-                var largestPhoto = update.Message.Photo!.Last();
+                employee.UserActivityStateType = UserActivityStateType.NotSet;
+
+                var largestPhoto = message.Photo!.Last();
 
                 var file = await telegramBackgroundService.GetFile(largestPhoto.FileId);
 
@@ -559,6 +564,7 @@ namespace DezinsectionApp.Services.Telegram
                 if (!ezhkh)
                 {
                     await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    await telegramBackgroundService.SendInfoMessage("Не удалось отправить отчет в барс");
                     return;
                 }
 
@@ -572,6 +578,7 @@ namespace DezinsectionApp.Services.Telegram
                 {
                     StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
                     await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    await telegramBackgroundService.SendInfoMessage("Не удалось отправить файл в амо");
                     return;
                 }
 
@@ -581,11 +588,15 @@ namespace DezinsectionApp.Services.Telegram
                 {
                     StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
                     await telegramBackgroundService.SendMessage(message.Chat.Id, "Не удалось отправить отчет, повторте попытку позже");
+                    await telegramBackgroundService.SendInfoMessage("Не удалось связать заявку с файлом");
                     return;
                 }
 
                 StorageBackgroundService.LeadStore.Remove(message.Chat.Id);
-                await telegramBackgroundService.SendMessage(message.Chat.Id, "Отчет отправлен");
+
+                var replyKeyboardMarkup = GetKeyboardByEmployeeType(employee.EmployeeType);
+
+                await telegramBackgroundService.SendMessage(message.Chat.Id, "Отчет отправлен", replyKeyboardMarkup);
             }
         }
 
@@ -677,7 +688,14 @@ namespace DezinsectionApp.Services.Telegram
 
         public async Task NotifyMaster(NotifyProxy notifyProxy)
         {
-            await telegramBackgroundService.SendMessage(long.Parse(notifyProxy.masterId), $"Новая Заявка!\n\n{notifyProxy.lead}");
+            if (notifyProxy.report)
+            {
+                await telegramBackgroundService.SendMessage(long.Parse(notifyProxy.masterId), $"Напоминаем о необходимости отчитаться по заявке!\n\n{notifyProxy.lead}");
+            }
+            else
+            {
+                await telegramBackgroundService.SendMessage(long.Parse(notifyProxy.masterId), $"Новая Заявка!\n\n{notifyProxy.lead}");
+            }
         }
 
         private async Task ShowMyLeads(Employee employee)
@@ -707,6 +725,7 @@ namespace DezinsectionApp.Services.Telegram
                         if (deals == null)
                         {
                             await telegramBackgroundService.SendMessage(employee.TelegramID, "Сервис недоступен");
+                            await telegramBackgroundService.SendInfoMessage("Не удалось получить сделки");
                             break;
                         }
 
