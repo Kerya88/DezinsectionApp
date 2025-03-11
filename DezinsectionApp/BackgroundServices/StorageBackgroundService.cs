@@ -62,6 +62,7 @@ namespace DezinsectionApp.BackgroundServices
 
                 Citys = citys;
                 State = bool.Parse(_configuration["State"]!);
+                LeadStore = [];
             }
             else
             {

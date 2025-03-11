@@ -48,13 +48,13 @@ namespace DezinsectionApp.BackgroundServices
                     switch (message.EndpointType)
                     {
                         case "post":
-                            _ = Task.Run(async () => await _amoCrmLeadService.AcceptLead(message.Body));
+                            await _amoCrmLeadService.AcceptLead(message.Body);
                             break;
                         case "assignmaster":
-                            _ = Task.Run(async () => await _amoCrmLeadService.AssignMaster(message.Body));
+                            await _amoCrmLeadService.AssignMaster(message.Body);
                             break;
                         case "notify":
-                            _ = Task.Run(async () => await _amoCrmLeadService.NotifyMaster(message.Body));
+                            await _amoCrmLeadService.NotifyMaster(message.Body);
                             break;
                         default:
                             break;
